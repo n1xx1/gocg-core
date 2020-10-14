@@ -157,10 +157,17 @@ func (c *OcgCore) CreateDuel(options CreateDuelOptions) DuelHandle {
 	duelOptions := typeDuelOptions{
 		seed:  0,
 		flags: 0,
-		team1: typePlayer{},
-		team2: typePlayer{},
+		team1: typePlayer{
+			startingLP:        8000,
+			startingDrawCount: 5,
+			drawCountPerTurn:  1,
+		},
+		team2: typePlayer{
+			startingLP:        8000,
+			startingDrawCount: 5,
+			drawCountPerTurn:  1,
+		},
 		cardReader: windows.NewCallback(func(payload uintptr, code uint32, data uintptr) uintptr {
-			fmt.Println("card reader: ", code)
 			cardData := (*typeCardData)(unsafe.Pointer(data))
 			_ = cardData
 
@@ -189,8 +196,6 @@ func (c *OcgCore) CreateDuel(options CreateDuelOptions) DuelHandle {
 		}),
 		scriptReader: windows.NewCallback(func(payload uintptr, duel DuelHandle, namePtr uintptr) uintptr {
 			name := fromCStringPtr(namePtr)
-			fmt.Println("script reader: ", name)
-
 			contents := options.ScriptReader(name)
 			if len(contents) == 0 {
 				return 0
@@ -229,6 +234,48 @@ func (c *OcgCore) LoadScript(duel DuelHandle, name string, content []byte) {
 	if err != nil && err != windows.ERROR_SUCCESS {
 		panic(err)
 	}
+}
+
+func (c *OcgCore) DuelNewCard(duel DuelHandle, player int, code uint32, controller int, location Location, sequence int, position Position) {
+	cardInfo := typeNewCardInfo{
+		team:    uint8(player),
+		duelist: uint8(player),
+		code:    code,
+		con:     uint8(controller),
+		loc:     uint32(location),
+		seq:     uint32(sequence),
+		pos:     uint32(position),
+	}
+	_, _, err := c.procDuelNewCard.Call(uintptr(duel), uintptr(unsafe.Pointer(&cardInfo)))
+	if err != nil && err != windows.ERROR_SUCCESS {
+		panic(err)
+	}
+}
+
+func (c *OcgCore) DuelProcess(duel DuelHandle) ProcessorFlag {
+	ret, _, err := c.procDuelProcess.Call(uintptr(duel))
+	if err != nil && err != windows.ERROR_SUCCESS {
+		panic(err)
+	}
+	fmt.Println(ret)
+	return ProcessorFlag(ret)
+}
+
+func (c *OcgCore) StartDuel(duel DuelHandle) {
+	_, _, err := c.procStartDuel.Call(uintptr(duel))
+	if err != nil && err != windows.ERROR_SUCCESS {
+		panic(err)
+	}
+}
+
+type typeNewCardInfo struct {
+	team    uint8
+	duelist uint8
+	code    uint32
+	con     uint8
+	loc     uint32
+	seq     uint32
+	pos     uint32
 }
 
 type typePlayer struct {
