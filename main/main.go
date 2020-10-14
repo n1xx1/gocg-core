@@ -3,14 +3,45 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
+	"math/rand"
 	"ocgcore"
 	"path/filepath"
+	"regexp"
+	"time"
 )
 
-func test() error {
-	db := newCardDatabase()
-	fmt.Println(len(db.cardList))
+func scriptReader() func(path string) []byte {
+	cardScriptRegex := regexp.MustCompile(`c\d+\.lua`)
 
+	return func(path string) []byte {
+		if cardScriptRegex.MatchString(path) {
+			path = filepath.Join("official", path)
+		}
+
+		contents, err := ioutil.ReadFile(filepath.Join("script", path))
+		if err != nil {
+			fmt.Println(err)
+			return nil
+		}
+		return contents
+	}
+}
+
+func cardReader() func(code uint32) ocgcore.RawCardData {
+	db := newCardDatabase()
+
+	return func(code uint32) ocgcore.RawCardData {
+		card := db[code]
+		if card == nil {
+			fmt.Println("card not found:", code)
+			return ocgcore.RawCardData{}
+		}
+		// fmt.Println("card reader:", card.name)
+		return card.data
+	}
+}
+
+func test() error {
 	path, err := filepath.Abs("ocgcore.dll")
 	if err != nil {
 		return err
@@ -20,34 +51,13 @@ func test() error {
 		return err
 	}
 
+	rand.Seed(time.Now().Unix())
+
 	duelHandle := core.CreateDuel(ocgcore.CreateDuelOptions{
-		Seed:  0,
-		Flags: 0,
-		CardReader: func(code uint32) ocgcore.RawCardData {
-			fmt.Println("card reader:", code)
-			return ocgcore.RawCardData{
-				Code:       0,
-				Alias:      0,
-				SetCodes:   nil,
-				CardType:   0,
-				Level:      0,
-				Attribute:  0,
-				Race:       0,
-				Attack:     0,
-				Defense:    0,
-				LScale:     0,
-				RScale:     0,
-				LinkMarker: 0,
-			}
-		},
-		ScriptReader: func(path string) []byte {
-			contents, err := ioutil.ReadFile(filepath.Join("script", path))
-			if err != nil {
-				fmt.Println(err)
-				return nil
-			}
-			return contents
-		},
+		Seed:         rand.Uint32(),
+		Flags:        ocgcore.CoreDuelModeMR5,
+		CardReader:   cardReader(),
+		ScriptReader: scriptReader(),
 	})
 
 	constantFile, err := ioutil.ReadFile("script/constant.lua")
@@ -55,17 +65,34 @@ func test() error {
 	utilityFile, err := ioutil.ReadFile("script/utility.lua")
 	core.LoadScript(duelHandle, "utility.lua", utilityFile)
 
-	for i, card := range myDeck {
-		core.DuelNewCard(duelHandle, 0, card, 0, ocgcore.LocationDeck, i, 1)
-	}
-	for i, card := range myDeck {
-		core.DuelNewCard(duelHandle, 1, card, 1, ocgcore.LocationDeck, i, 1)
+	core.SetupDeck(duelHandle, 0, myDeck, []uint32{}, true)
+	core.SetupDeck(duelHandle, 1, myDeck, []uint32{}, true)
+
+	messages := core.DuelGetMessage(duelHandle)
+	for _, message := range messages {
+		msg := ocgcore.ReadMessage(message)
+		fmt.Printf("%#v", msg)
 	}
 
 	core.StartDuel(duelHandle)
 
-	xd := core.DuelProcess(duelHandle)
-	fmt.Println(xd)
+	for {
+		status := core.DuelProcess(duelHandle)
+		messages = core.DuelGetMessage(duelHandle)
+		for _, message := range messages {
+			msg := ocgcore.ReadMessage(message)
+			if msg != nil {
+				fmt.Printf("%#v\n", msg)
+			}
+		}
+
+		if status != ocgcore.ProcessorFlagContinue {
+			fmt.Println("status:", status)
+			break
+		}
+	}
+
+	core.Debug(duelHandle)
 
 	return nil
 }

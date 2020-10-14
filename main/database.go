@@ -2,7 +2,7 @@ package main
 
 import (
 	"database/sql"
-	_ "github.com/alicebob/sqlittle/driver"
+	_ "github.com/mattn/go-sqlite3"
 	"ocgcore"
 )
 
@@ -13,42 +13,38 @@ type cardDatabaseEntry struct {
 	strings map[int]string
 }
 
-type cardDatabase struct {
-	cards    map[uint32]*cardDatabaseEntry
-	cardList []*cardDatabaseEntry
-}
+type cardDatabase map[uint32]*cardDatabaseEntry
 
-func newCardDatabase() cardDatabase {
-	db, err := sql.Open("sqlittle", "./cards.cdb")
+func loadDatabase(fileName string, cards cardDatabase) error {
+	db, err := sql.Open("sqlite3", fileName)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	datas, err := db.Query(`
 SELECT
-	t.id, t.ot, t.alias, t.setcode, t.type, t.atk, t.def, t.level, t.race, t.attribute, t.category,
-	d.name, d.desc, d.str1, d.str2, d.str3, d.str4, d.str5, d.str6, d.str7, d.str8, d.str9, d.str10, d.str11, d.str12, d.str13, d.str14, d.str15, d.str16
+	d.id, d.ot, d.alias, d.setcode, d.type, d.atk, d.def, d.level, d.race, d.attribute, d.category,
+	t.name, t.desc, t.str1, t.str2, t.str3, t.str4, t.str5, t.str6, t.str7, t.str8, t.str9, t.str10, t.str11, t.str12, t.str13, t.str14, t.str15, t.str16
 FROM datas d
 LEFT JOIN texts t ON d.id = t.id`)
 
 	if err != nil {
-		panic(err)
+		return err
 	}
 
-	var cardList []*cardDatabaseEntry
-	cards := map[uint32]*cardDatabaseEntry{}
-
-	var dataId, dataOt, dataAlias, dataSetCode, dataType, dataLevel, dataRace, dataAttribute, dataCategory, dataAtk, dataDef uint32
+	var dataId, dataOt, dataAlias, dataType, dataLevel, dataRace, dataAttribute, dataCategory uint32
+	var dataSetCode uint64
+	var dataAtk, dataDef int32
 	var name, desc string
 	var str [16]string
 
 	for datas.Next() {
 		err = datas.Scan(
 			&dataId, &dataOt, &dataAlias, &dataSetCode, &dataType, &dataAtk, &dataDef, &dataLevel, &dataRace, &dataAttribute, &dataCategory,
-			&name, &desc, &str[0], &str[1], &str[2], &str[3], &str[4], &str[5], &str[6], &str[7], &str[8], &str[9], &str[10], &str[11], &str[12], &str[13], &str[14], &str[15],
+			&fileName, &desc, &str[0], &str[1], &str[2], &str[3], &str[4], &str[5], &str[6], &str[7], &str[8], &str[9], &str[10], &str[11], &str[12], &str[13], &str[14], &str[15],
 		)
 		if err != nil {
-			panic(err)
+			return err
 		}
 
 		card := &cardDatabaseEntry{}
@@ -65,11 +61,11 @@ LEFT JOIN texts t ON d.id = t.id`)
 		}
 
 		card.data.CardType = dataType
-		card.data.Attack = int32(dataAtk)
-		card.data.Defense = int32(dataDef)
+		card.data.Attack = dataAtk
+		card.data.Defense = dataDef
 
 		if (dataType & uint32(ocgcore.TypeLink)) != 0 {
-			card.data.LinkMarker = dataDef
+			card.data.LinkMarker = uint32(dataDef)
 			card.data.Defense = 0
 		}
 
@@ -92,13 +88,20 @@ LEFT JOIN texts t ON d.id = t.id`)
 				card.strings[i] = str[i]
 			}
 		}
-
-		cardList = append(cardList, card)
 		cards[card.data.Code] = card
 	}
+	return nil
+}
 
-	return cardDatabase{
-		cards:    cards,
-		cardList: cardList,
+func newCardDatabase() cardDatabase {
+	cards := cardDatabase{}
+	err := loadDatabase("cards.cdb", cards)
+	if err != nil {
+		panic(err)
 	}
+	err = loadDatabase("release.cdb", cards)
+	if err != nil {
+		panic(err)
+	}
+	return cards
 }
