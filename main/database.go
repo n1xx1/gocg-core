@@ -15,6 +15,8 @@ type cardDatabaseEntry struct {
 
 type cardDatabase map[uint32]*cardDatabaseEntry
 
+const cardTypeLink uint32 = 0x4000000
+
 func loadDatabase(fileName string, cards cardDatabase) error {
 	db, err := sql.Open("sqlite3", fileName)
 	if err != nil {
@@ -64,7 +66,7 @@ LEFT JOIN texts t ON d.id = t.id`)
 		card.data.Attack = dataAtk
 		card.data.Defense = dataDef
 
-		if (dataType & uint32(ocgcore.TypeLink)) != 0 {
+		if (dataType & cardTypeLink) != 0 {
 			card.data.LinkMarker = uint32(dataDef)
 			card.data.Defense = 0
 		}

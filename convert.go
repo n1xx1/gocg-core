@@ -1,5 +1,54 @@
 package ocgcore
 
+import "math/bits"
+
+//       other              our
+// _____szone__mzone _____szone__mzone
+// 00000000 00000000 00000000 00000000
+func parsePlaceFlag(f uint32) []Place {
+	ret := make([]Place, bits.OnesCount32(^f))
+
+	x := 0
+	parsePlaceFlagPlayer((^f)&0xffff, 0, &x, ret)
+	parsePlaceFlagPlayer((^f)>>16, 1, &x, ret)
+	return ret
+}
+func parsePlaceFlagPlayer(flag uint32, player int, x *int, ret []Place) {
+	mask := uint32(1)
+	for i := 0; i < 7; i++ {
+		if tryMask(flag, &mask) {
+			ret[*x] = Place{Player: player, Location: LocationMonsterZone, Sequence: i}
+			*x++
+		}
+	}
+	// TODO: figure out if it's important or not
+	mask = mask << 1
+	for i := 0; i < 5; i++ {
+		if tryMask(flag, &mask) {
+			ret[*x] = Place{Player: player, Location: LocationSpellZone, Sequence: i}
+			*x++
+		}
+	}
+	if tryMask(flag, &mask) {
+		ret[*x] = Place{Player: player, Location: LocationFieldZone}
+		*x++
+	}
+	for i := 0; i < 2; i++ {
+		if tryMask(flag, &mask) {
+			ret[*x] = Place{Player: player, Location: LocationPendulumZone, Sequence: i}
+			*x++
+		}
+	}
+}
+
+func tryMask(flag uint32, mask *uint32) (r bool) {
+	if flag&*mask == *mask {
+		r = true
+	}
+	*mask = *mask << 1
+	return
+}
+
 func parseCorePhaseDetailed(p corePhase) DetailedPhase {
 	switch p {
 	case corePhaseDraw:
@@ -54,6 +103,14 @@ func parseCorePosition(p corePosition) Position {
 		return PositionFaceUpDefense
 	case corePositionFaceDownDefense:
 		return PositionFaceDownDefense
+	case corePositionFaceDown:
+		return PositionFaceDownAttack
+	case corePositionFaceUp:
+		return PositionFaceUpAttack
+	case corePositionDefense:
+		return PositionFaceUpDefense
+	case corePositionAttack:
+		return PositionFaceUpAttack
 	default:
 		return PositionUnknown
 	}

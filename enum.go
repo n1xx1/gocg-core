@@ -1,5 +1,7 @@
 package ocgcore
 
+//go:generate go run ocgcore/cmd/enumer -type=Location,FieldPlace,DetailedPhase,Phase,BattlePosition,FacePosition,Position -json -transform=snake -output enum_enumer.go -trimprefix Location,FieldPlace,DetailedPhase,Phase,BattlePosition,FacePosition,Position
+
 type Location uint
 
 const (
@@ -16,33 +18,33 @@ const (
 	LocationPendulumZone
 )
 
-func (l Location) GoString() string {
-	if l, ok := locationNames[l]; ok {
-		return l
-	}
-	return "unknown"
-}
-
 func (l Location) OnField() bool {
 	return l >= LocationMonsterZone && l <= LocationPendulumZone
 }
 
-func (l Location) MarshalJSON() ([]byte, error) {
-	return []byte(`"` + l.GoString() + `"`), nil
+func (l Location) IsEMZ(seq int) bool {
+	return l == LocationMonsterZone && (seq == 5 || seq == 6)
 }
 
-var locationNames = map[Location]string{
-	LocationDeck:         "deck",
-	LocationHand:         "hand",
-	LocationGrave:        "grave",
-	LocationBanished:     "banished",
-	LocationExtraDeck:    "extra_deck",
-	LocationOverlay:      "overlay",
-	LocationMonsterZone:  "monster_zone",
-	LocationSpellZone:    "spell_zone",
-	LocationFieldZone:    "field_zone",
-	LocationPendulumZone: "pendulum_zone",
-}
+type FieldPlace int
+
+const (
+	Monster1 FieldPlace = iota
+	Monster2
+	Monster3
+	Monster4
+	Monster5
+	MonsterExtra1
+	MonsterExtra2
+	Spell0
+	Spell1
+	Spell2
+	Spell3
+	Spell4
+	SpellField
+	SpellPendulum1
+	SpellPendulum2
+)
 
 type DetailedPhase uint
 
@@ -60,30 +62,6 @@ const (
 	DetailedPhaseEnd
 )
 
-func (d DetailedPhase) MarshalJSON() ([]byte, error) {
-	return []byte(`"` + d.GoString() + `"`), nil
-}
-
-func (d DetailedPhase) GoString() string {
-	if l, ok := detailedPhaseNames[d]; ok {
-		return l
-	}
-	return "unknown"
-}
-
-var detailedPhaseNames = map[DetailedPhase]string{
-	DetailedPhaseDraw:              "draw",
-	DetailedPhaseStandby:           "standby",
-	DetailedPhaseMain1:             "main1",
-	DetailedPhaseBattleStart:       "battle_start",
-	DetailedPhaseBattleStep:        "battle_step",
-	DetailedPhaseDamage:            "damage",
-	DetailedPhaseDamageCalculation: "damage_calculation",
-	DetailedPhaseBattle:            "battle",
-	DetailedPhaseMain2:             "main2",
-	DetailedPhaseEnd:               "end",
-}
-
 type Phase uint
 
 const (
@@ -96,25 +74,21 @@ const (
 	PhaseEP
 )
 
-func (p Phase) MarshalJSON() ([]byte, error) {
-	return []byte(`"` + p.GoString() + `"`), nil
-}
+type BattlePosition int
 
-func (p Phase) GoString() string {
-	if l, ok := phaseNames[p]; ok {
-		return l
-	}
-	return "unknown"
-}
+const (
+	BattlePositionUnknown BattlePosition = iota
+	BattlePositionAttack
+	BattlePositionDefense
+)
 
-var phaseNames = map[Phase]string{
-	PhaseDP: "DP",
-	PhaseSP: "SP",
-	PhaseM1: "M1",
-	PhaseBP: "BP",
-	PhaseM2: "M2",
-	PhaseEP: "EP",
-}
+type FacePosition int
+
+const (
+	FacePositionUnknown FacePosition = iota
+	FacePositionUp
+	FacePositionDown
+)
 
 type Position uint
 
@@ -125,6 +99,35 @@ const (
 	PositionFaceUpDefense
 	PositionFaceDownDefense
 )
+
+func (p Position) Battle() BattlePosition {
+	switch p {
+	case PositionFaceUpAttack:
+		return BattlePositionAttack
+	case PositionFaceDownAttack:
+		return BattlePositionAttack
+	case PositionFaceUpDefense:
+		return BattlePositionDefense
+	case PositionFaceDownDefense:
+		return BattlePositionDefense
+	default:
+		return BattlePositionUnknown
+	}
+}
+func (p Position) Face() FacePosition {
+	switch p {
+	case PositionFaceUpAttack:
+		return FacePositionUp
+	case PositionFaceDownAttack:
+		return FacePositionDown
+	case PositionFaceUpDefense:
+		return FacePositionUp
+	case PositionFaceDownDefense:
+		return FacePositionDown
+	default:
+		return FacePositionUnknown
+	}
+}
 
 func (p Position) FaceUp() bool {
 	return p == PositionFaceUpAttack || p == PositionFaceUpDefense
@@ -137,22 +140,4 @@ func (p Position) Defense() bool {
 }
 func (p Position) Attack() bool {
 	return p == PositionFaceUpAttack || p == PositionFaceDownAttack
-}
-
-func (p Position) MarshalJSON() ([]byte, error) {
-	return []byte(`"` + p.GoString() + `"`), nil
-}
-
-func (p Position) GoString() string {
-	if l, ok := positionNames[p]; ok {
-		return l
-	}
-	return "unknown"
-}
-
-var positionNames = map[Position]string{
-	PositionFaceUpAttack:    "faceup_attack",
-	PositionFaceDownAttack:  "facedown_attack",
-	PositionFaceUpDefense:   "faceup_defense",
-	PositionFaceDownDefense: "facedown_defense",
 }

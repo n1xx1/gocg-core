@@ -2,12 +2,14 @@ package ocgcore
 
 import (
 	"bytes"
-	"encoding/binary"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"reflect"
 	"sync"
 )
+
+//go:generate go run ocgcore/cmd/enumer -type=MessageType -json -transform=snake -output message_enumer.go -trimprefix MessageType
 
 type cardLocation struct {
 	controller int
@@ -16,11 +18,10 @@ type cardLocation struct {
 	position   corePosition
 }
 
-func ReadMessage(contents []byte) Message {
+func readMessage(contents []byte) Message {
 	b := bytes.NewBuffer(contents)
 
-	var id uint8
-	_ = binary.Read(b, binary.LittleEndian, &id)
+	id := readUint8(b)
 
 	switch coreMessage(id) {
 	case coreMessageRetry:
@@ -227,51 +228,12 @@ func readCardLocation(b *bytes.Buffer) cardLocation {
 		position:   corePosition(readUint32(b)),
 	}
 }
-func readUint8(b *bytes.Buffer) uint8 {
-	var value uint8
-	_ = binary.Read(b, binary.LittleEndian, &value)
-	return value
-}
-func readUint16(b *bytes.Buffer) uint16 {
-	var value uint16
-	_ = binary.Read(b, binary.LittleEndian, &value)
-	return value
-}
-func readUint32(b *bytes.Buffer) uint32 {
-	var value uint32
-	_ = binary.Read(b, binary.LittleEndian, &value)
-	return value
-}
-func readUint64(b *bytes.Buffer) uint64 {
-	var value uint64
-	_ = binary.Read(b, binary.LittleEndian, &value)
-	return value
-}
-func readInt8(b *bytes.Buffer) int8 {
-	var value int8
-	_ = binary.Read(b, binary.LittleEndian, &value)
-	return value
-}
-func readInt16(b *bytes.Buffer) int16 {
-	var value int16
-	_ = binary.Read(b, binary.LittleEndian, &value)
-	return value
-}
-func readInt32(b *bytes.Buffer) int32 {
-	var value int32
-	_ = binary.Read(b, binary.LittleEndian, &value)
-	return value
-}
-func readInt64(b *bytes.Buffer) int64 {
-	var value int64
-	_ = binary.Read(b, binary.LittleEndian, &value)
-	return value
-}
 
 type MessageType uint8
 
 const (
-	MessageTypeRetry MessageType = iota
+	MessageTypeWaitingResponse MessageType = iota
+	MessageTypeRetry
 	MessageTypeHint
 	MessageTypeWaiting
 	MessageTypeStart
@@ -368,106 +330,8 @@ const (
 	MessageTypeRemoveCards
 )
 
-var messageTypeNames = map[MessageType]string{
-	MessageTypeRetry:              "retry",
-	MessageTypeHint:               "hint",
-	MessageTypeWaiting:            "waiting",
-	MessageTypeStart:              "start",
-	MessageTypeWin:                "win",
-	MessageTypeUpdateData:         "update_data",
-	MessageTypeUpdateCard:         "update_card",
-	MessageTypeRequestDeck:        "request_deck",
-	MessageTypeSelectBattleCMD:    "select_battlecmd",
-	MessageTypeSelectIdleCMD:      "select_idlecmd",
-	MessageTypeSelectEffectYN:     "select_effectyn",
-	MessageTypeSelectYesNo:        "select_yesno",
-	MessageTypeSelectOption:       "select_option",
-	MessageTypeSelectCard:         "select_card",
-	MessageTypeSelectChain:        "select_chain",
-	MessageTypeSelectPlace:        "select_place",
-	MessageTypeSelectPosition:     "select_position",
-	MessageTypeSelectTribute:      "select_tribute",
-	MessageTypeSortChain:          "sort_chain",
-	MessageTypeSelectCounter:      "select_counter",
-	MessageTypeSelectSum:          "select_sum",
-	MessageTypeSelectDisfield:     "select_disfield",
-	MessageTypeSortCard:           "sort_card",
-	MessageTypeSelectUnselectCard: "select_unselect_card",
-	MessageTypeConfirmDeckTop:     "confirm_decktop",
-	MessageTypeConfirmCards:       "confirm_cards",
-	MessageTypeShuffleDeck:        "shuffle_deck",
-	MessageTypeShuffleHand:        "shuffle_hand",
-	MessageTypeRefreshDeck:        "refresh_deck",
-	MessageTypeSwapGraveDeck:      "swap_grave_deck",
-	MessageTypeShuffleSetCard:     "shuffle_set_card",
-	MessageTypeReverseDeck:        "reverse_deck",
-	MessageTypeDeckTop:            "deck_top",
-	MessageTypeShuffleExtra:       "shuffle_extra",
-	MessageTypeNewTurn:            "new_turn",
-	MessageTypeNewPhase:           "new_phase",
-	MessageTypeConfirmExtraTop:    "confirm_extratop",
-	MessageTypeMove:               "move",
-	MessageTypePosChange:          "pos_change",
-	MessageTypeSet:                "set",
-	MessageTypeSwap:               "swap",
-	MessageTypeFieldDisabled:      "field_disabled",
-	MessageTypeSummoning:          "summoning",
-	MessageTypeSummoned:           "summoned",
-	MessageTypeSPSummoning:        "spsummoning",
-	MessageTypeSPSummoned:         "spsummoned",
-	MessageTypeFlipSummoning:      "flipsummoning",
-	MessageTypeFlipSummoned:       "flipsummoned",
-	MessageTypeChaining:           "chaining",
-	MessageTypeChained:            "chained",
-	MessageTypeChainSolving:       "chain_solving",
-	MessageTypeChainSolved:        "chain_solved",
-	MessageTypeChainEnd:           "chain_end",
-	MessageTypeChainNegated:       "chain_negated",
-	MessageTypeChainDisabled:      "chain_disabled",
-	MessageTypeCardSelected:       "card_selected",
-	MessageTypeRandomSelected:     "random_selected",
-	MessageTypeBecomeTarget:       "become_target",
-	MessageTypeDraw:               "draw",
-	MessageTypeDamage:             "damage",
-	MessageTypeRecover:            "recover",
-	MessageTypeEquip:              "equip",
-	MessageTypeLPUpdate:           "lpupdate",
-	MessageTypeUnequip:            "unequip",
-	MessageTypeCardTarget:         "card_target",
-	MessageTypeCancelTarget:       "cancel_target",
-	MessageTypePayLPCost:          "pay_lpcost",
-	MessageTypeAddCounter:         "add_counter",
-	MessageTypeRemoveCounter:      "remove_counter",
-	MessageTypeAttack:             "attack",
-	MessageTypeBattle:             "battle",
-	MessageTypeAttackDisabled:     "attack_disabled",
-	MessageTypeDamageStepStart:    "damage_step_start",
-	MessageTypeDamageStepEnd:      "damage_step_end",
-	MessageTypeMissedEffect:       "missed_effect",
-	MessageTypeBeChainTarget:      "be_chain_target",
-	MessageTypeCreateRelation:     "create_relation",
-	MessageTypeReleaseRelation:    "release_relation",
-	MessageTypeTossCoin:           "toss_coin",
-	MessageTypeTossDice:           "toss_dice",
-	MessageTypeRockPaperScissors:  "rock_paper_scissors",
-	MessageTypeHandRes:            "hand_res",
-	MessageTypeAnnounceRace:       "announce_race",
-	MessageTypeAnnounceAttribute:  "announce_attrib",
-	MessageTypeAnnounceCard:       "announce_card",
-	MessageTypeAnnounceNumber:     "announce_number",
-	MessageTypeCardHint:           "card_hint",
-	MessageTypeTagSwap:            "tag_swap",
-	MessageTypeReloadField:        "reload_field",
-	MessageTypeAIName:             "ai_name",
-	MessageTypeShowHint:           "show_hint",
-	MessageTypePlayerHint:         "player_hint",
-	MessageTypeMatchKill:          "match_kill",
-	MessageTypeCustomMessage:      "custom_msg",
-	MessageTypeRemoveCards:        "remove_cards",
-}
-
 type Message interface {
-	Type() MessageType
+	messageType() MessageType
 }
 
 type ChainInfo struct {
@@ -495,11 +359,8 @@ type CardInfo struct {
 }
 
 type FieldCardInfo struct {
-	Code       int          `json:"code"`
-	Controller int          `json:"controller"`
-	Location   Location     `json:"location"`
-	Sequence   int          `json:"sequence"`
-	Position   corePosition `json:"position"`
+	Code int `json:"code"`
+	CardLocation
 }
 
 type CounterCardInfo struct {
@@ -511,13 +372,10 @@ type CounterCardInfo struct {
 }
 
 type CardChainInfo struct {
-	Code        int          `json:"code"`
-	Controller  int          `json:"controller"`
-	Location    Location     `json:"location"`
-	Sequence    int          `json:"sequence"`
-	Position    corePosition `json:"position"`
-	Description uint64       `json:"description"`
-	ClientMode  uint8        `json:"client_mode"`
+	Code int `json:"code"`
+	CardLocation
+	Description uint64 `json:"description"`
+	ClientMode  uint8  `json:"client_mode"`
 }
 
 type TributeCardInfo struct {
@@ -530,17 +388,29 @@ type TributeCardInfo struct {
 
 type DrawnCardInfo struct {
 	Code     int          `json:"code"`
-	Position corePosition `json:"position"`
+	Position FacePosition `json:"position"`
 }
 
-type MessageRetry struct {
+type CardLocation struct {
+	Controller int      `json:"controller"`
+	Location   Location `json:"location"`
+	Sequence   int      `json:"sequence"`
+	Position   Position `json:"position"`
 }
+
+type MessageWaitingResponse struct{}
+
+func (MessageWaitingResponse) messageType() MessageType {
+	return MessageTypeWaitingResponse
+}
+
+type MessageRetry struct{}
 
 func ReadMessageRetry(*bytes.Buffer) (msg MessageRetry) {
 	return
 }
 
-func (MessageRetry) Type() MessageType {
+func (MessageRetry) messageType() MessageType {
 	return MessageTypeRetry
 }
 
@@ -557,29 +427,27 @@ func ReadMessageHint(b *bytes.Buffer) (msg MessageHint) {
 	return
 }
 
-func (MessageHint) Type() MessageType {
+func (MessageHint) messageType() MessageType {
 	return MessageTypeHint
 }
 
-type MessageWaiting struct {
-}
+type MessageWaiting struct{}
 
 func ReadMessageWaiting(*bytes.Buffer) (msg MessageWaiting) {
 	return
 }
 
-func (MessageWaiting) Type() MessageType {
+func (MessageWaiting) messageType() MessageType {
 	return MessageTypeWaiting
 }
 
-type MessageStart struct {
-}
+type MessageStart struct{}
 
 func ReadMessageStart(*bytes.Buffer) (msg MessageStart) {
 	return
 }
 
-func (MessageStart) Type() MessageType {
+func (MessageStart) messageType() MessageType {
 	return MessageTypeStart
 }
 
@@ -594,40 +462,37 @@ func ReadMessageWin(b *bytes.Buffer) (msg MessageWin) {
 	return
 }
 
-func (MessageWin) Type() MessageType {
+func (MessageWin) messageType() MessageType {
 	return MessageTypeWin
 }
 
-type MessageUpdateData struct {
-}
+type MessageUpdateData struct{}
 
 func ReadMessageUpdateData(*bytes.Buffer) (msg MessageUpdateData) {
 	return
 }
 
-func (MessageUpdateData) Type() MessageType {
+func (MessageUpdateData) messageType() MessageType {
 	return MessageTypeUpdateData
 }
 
-type MessageUpdateCard struct {
-}
+type MessageUpdateCard struct{}
 
 func ReadMessageUpdateCard(*bytes.Buffer) (msg MessageUpdateCard) {
 	return
 }
 
-func (MessageUpdateCard) Type() MessageType {
+func (MessageUpdateCard) messageType() MessageType {
 	return MessageTypeUpdateCard
 }
 
-type MessageRequestDeck struct {
-}
+type MessageRequestDeck struct{}
 
 func ReadMessageRequestDeck(*bytes.Buffer) (msg MessageRequestDeck) {
 	return
 }
 
-func (MessageRequestDeck) Type() MessageType {
+func (MessageRequestDeck) messageType() MessageType {
 	return MessageTypeRequestDeck
 }
 
@@ -643,33 +508,35 @@ func ReadMessageSelectBattleCMD(b *bytes.Buffer) (msg MessageSelectBattleCMD) {
 	msg.Player = int(readUint8(b))
 
 	selectChainsSize := readUint32(b)
-	for i := 0; i < int(selectChainsSize); i++ {
-		msg.Chains = append(msg.Chains, ChainInfo{
+	msg.Chains = make([]ChainInfo, selectChainsSize)
+	for i := range msg.Chains {
+		msg.Chains[i] = ChainInfo{
 			Code:        int(readUint32(b)),
 			Controller:  int(readUint8(b)),
 			Location:    parseCoreLocation(coreLocation(readUint8(b))),
 			Sequence:    int(readUint32(b)),
 			Description: readUint64(b),
 			ClientMode:  readUint8(b),
-		})
+		}
 	}
 
 	attackableSize := readUint32(b)
-	for i := 0; i < int(attackableSize); i++ {
-		msg.Attacks = append(msg.Attacks, AttackInfo{
+	msg.Attacks = make([]AttackInfo, attackableSize)
+	for i := range msg.Attacks {
+		msg.Attacks[i] = AttackInfo{
 			Code:       int(readUint32(b)),
 			Controller: int(readUint8(b)),
 			Location:   parseCoreLocation(coreLocation(readUint8(b))),
 			Sequence:   int(readUint32(b)),
 			Direct:     readUint8(b) != 0,
-		})
+		}
 	}
 	msg.ToM2 = readUint8(b) != 0
 	msg.ToEP = readUint8(b) != 0
 	return
 }
 
-func (MessageSelectBattleCMD) Type() MessageType {
+func (MessageSelectBattleCMD) messageType() MessageType {
 	return MessageTypeSelectBattleCMD
 }
 
@@ -690,65 +557,71 @@ func ReadMessageSelectIdleCMD(b *bytes.Buffer) (msg MessageSelectIdleCMD) {
 	msg.Player = int(readUint8(b))
 
 	summonableSize := readUint32(b)
-	for i := 0; i < int(summonableSize); i++ {
-		msg.Summons = append(msg.Summons, CardInfo{
+	msg.Summons = make([]CardInfo, summonableSize)
+	for i := range msg.Summons {
+		msg.Summons[i] = CardInfo{
 			Code:       int(readUint32(b)),
 			Controller: int(readUint8(b)),
 			Location:   parseCoreLocation(coreLocation(readUint8(b))),
 			Sequence:   int(readUint32(b)),
-		})
+		}
 	}
 
 	spSummonableSize := readUint32(b)
-	for i := 0; i < int(spSummonableSize); i++ {
-		msg.SpSummons = append(msg.SpSummons, CardInfo{
+	msg.SpSummons = make([]CardInfo, spSummonableSize)
+	for i := range msg.SpSummons {
+		msg.SpSummons[i] = CardInfo{
 			Code:       int(readUint32(b)),
 			Controller: int(readUint8(b)),
 			Location:   parseCoreLocation(coreLocation(readUint8(b))),
 			Sequence:   int(readUint32(b)),
-		})
+		}
 	}
 
 	posChangeSize := readUint32(b)
-	for i := 0; i < int(posChangeSize); i++ {
-		msg.PosChanges = append(msg.PosChanges, CardInfo{
+	msg.PosChanges = make([]CardInfo, posChangeSize)
+	for i := range msg.PosChanges {
+		msg.PosChanges[i] = CardInfo{
 			Code:       int(readUint32(b)),
 			Controller: int(readUint8(b)),
 			Location:   parseCoreLocation(coreLocation(readUint8(b))),
 			Sequence:   int(readUint32(b)),
-		})
+		}
 	}
 
 	monsterSetSize := readUint32(b)
-	for i := 0; i < int(monsterSetSize); i++ {
-		msg.MonsterSets = append(msg.MonsterSets, CardInfo{
+	msg.MonsterSets = make([]CardInfo, monsterSetSize)
+	for i := range msg.MonsterSets {
+		msg.MonsterSets[i] = CardInfo{
 			Code:       int(readUint32(b)),
 			Controller: int(readUint8(b)),
 			Location:   parseCoreLocation(coreLocation(readUint8(b))),
 			Sequence:   int(readUint32(b)),
-		})
+		}
 	}
 
 	spellSetSize := readUint32(b)
-	for i := 0; i < int(spellSetSize); i++ {
-		msg.SpellSets = append(msg.SpellSets, CardInfo{
+	msg.SpellSets = make([]CardInfo, spellSetSize)
+	for i := range msg.SpellSets {
+		msg.SpellSets[i] = CardInfo{
 			Code:       int(readUint32(b)),
 			Controller: int(readUint8(b)),
 			Location:   parseCoreLocation(coreLocation(readUint8(b))),
 			Sequence:   int(readUint32(b)),
-		})
+		}
 	}
 
 	activateSize := readUint32(b)
-	for i := 0; i < int(activateSize); i++ {
-		msg.Activate = append(msg.Activate, ChainInfo{
+	msg.Activate = make([]ChainInfo, activateSize)
+	for i := range msg.Activate {
+		msg.Activate[i] = ChainInfo{
 			Code:        int(readUint32(b)),
 			Controller:  int(readUint8(b)),
 			Location:    parseCoreLocation(coreLocation(readUint8(b))),
 			Sequence:    int(readUint32(b)),
 			Description: readUint64(b),
 			ClientMode:  readUint8(b),
-		})
+		}
 	}
 
 	msg.ToBP = readUint8(b) != 0
@@ -757,18 +630,18 @@ func ReadMessageSelectIdleCMD(b *bytes.Buffer) (msg MessageSelectIdleCMD) {
 	return
 }
 
-func (MessageSelectIdleCMD) Type() MessageType {
+func (MessageSelectIdleCMD) messageType() MessageType {
 	return MessageTypeSelectIdleCMD
 }
 
 type MessageSelectEffectYN struct {
-	Player      int          `json:"player"`
-	Code        uint32       `json:"code"`
-	Controller  int          `json:"controller"`
-	Location    Location     `json:"location"`
-	Sequence    int          `json:"sequence"`
-	Position    corePosition `json:"position"`
-	Description uint64       `json:"description"`
+	Player      int      `json:"player"`
+	Code        uint32   `json:"code"`
+	Controller  int      `json:"controller"`
+	Location    Location `json:"location"`
+	Sequence    int      `json:"sequence"`
+	Position    Position `json:"position"`
+	Description uint64   `json:"description"`
 }
 
 func ReadMessageSelectEffectYN(b *bytes.Buffer) (msg MessageSelectEffectYN) {
@@ -778,12 +651,12 @@ func ReadMessageSelectEffectYN(b *bytes.Buffer) (msg MessageSelectEffectYN) {
 	msg.Controller = loc.controller
 	msg.Location = parseCoreLocation(loc.location)
 	msg.Sequence = loc.sequence
-	msg.Position = loc.position
+	msg.Position = parseCorePosition(loc.position)
 	msg.Description = readUint64(b)
 	return
 }
 
-func (MessageSelectEffectYN) Type() MessageType {
+func (MessageSelectEffectYN) messageType() MessageType {
 	return MessageTypeSelectEffectYN
 }
 
@@ -798,7 +671,7 @@ func ReadMessageSelectYesNo(b *bytes.Buffer) (msg MessageSelectYesNo) {
 	return
 }
 
-func (MessageSelectYesNo) Type() MessageType {
+func (MessageSelectYesNo) messageType() MessageType {
 	return MessageTypeSelectYesNo
 }
 
@@ -811,13 +684,14 @@ func ReadMessageSelectOption(b *bytes.Buffer) (msg MessageSelectOption) {
 	msg.Player = int(readUint8(b))
 
 	optionsSize := readUint8(b)
-	for i := 0; i < int(optionsSize); i++ {
-		msg.Options = append(msg.Options, readUint64(b))
+	msg.Options = make([]uint64, optionsSize)
+	for i := range msg.Options {
+		msg.Options[i] = readUint64(b)
 	}
 	return
 }
 
-func (MessageSelectOption) Type() MessageType {
+func (MessageSelectOption) messageType() MessageType {
 	return MessageTypeSelectOption
 }
 
@@ -829,6 +703,15 @@ type MessageSelectCard struct {
 	Cards       []FieldCardInfo `json:"cards"`
 }
 
+func parseCardLocation(loc cardLocation) CardLocation {
+	return CardLocation{
+		Controller: loc.controller,
+		Location:   parseCoreLocation(loc.location),
+		Sequence:   loc.sequence,
+		Position:   parseCorePosition(loc.position),
+	}
+}
+
 func ReadMessageSelectCard(b *bytes.Buffer) (msg MessageSelectCard) {
 	msg.Player = int(readUint8(b))
 	msg.Cancellable = readUint8(b) != 0
@@ -836,21 +719,17 @@ func ReadMessageSelectCard(b *bytes.Buffer) (msg MessageSelectCard) {
 	msg.Max = int(readUint32(b))
 
 	cardsSize := readUint32(b)
-	for i := 0; i < int(cardsSize); i++ {
-		code := readUint32(b)
-		loc := readCardLocation(b)
-		msg.Cards = append(msg.Cards, FieldCardInfo{
-			Code:       int(code),
-			Controller: loc.controller,
-			Location:   parseCoreLocation(loc.location),
-			Sequence:   loc.sequence,
-			Position:   loc.position,
-		})
+	msg.Cards = make([]FieldCardInfo, cardsSize)
+	for i := range msg.Cards {
+		msg.Cards[i] = FieldCardInfo{
+			Code:         int(readUint32(b)),
+			CardLocation: parseCardLocation(readCardLocation(b)),
+		}
 	}
 	return
 }
 
-func (MessageSelectCard) Type() MessageType {
+func (MessageSelectCard) messageType() MessageType {
 	return MessageTypeSelectCard
 }
 
@@ -871,59 +750,53 @@ func ReadMessageSelectChain(b *bytes.Buffer) (msg MessageSelectChain) {
 	msg.HintTimingOther = readUint32(b)
 
 	chainsSize := readUint32(b)
-	for i := 0; i < int(chainsSize); i++ {
-		code := readUint32(b)
-		loc := readCardLocation(b)
-		description := readUint64(b)
-		clientMode := readUint8(b)
-		msg.Chains = append(msg.Chains, CardChainInfo{
-			Code:        int(code),
-			Controller:  loc.controller,
-			Location:    parseCoreLocation(loc.location),
-			Sequence:    loc.sequence,
-			Position:    loc.position,
-			Description: description,
-			ClientMode:  clientMode,
-		})
+	msg.Chains = make([]CardChainInfo, chainsSize)
+	for i := range msg.Chains {
+		msg.Chains[i] = CardChainInfo{
+			Code:         int(readUint32(b)),
+			CardLocation: parseCardLocation(readCardLocation(b)),
+			Description:  readUint64(b),
+			ClientMode:   readUint8(b),
+		}
 	}
 	return
 }
 
-func (MessageSelectChain) Type() MessageType {
+func (MessageSelectChain) messageType() MessageType {
 	return MessageTypeSelectChain
 }
 
 type MessageSelectPlace struct {
-	Player int    `json:"player"`
-	Count  int    `json:"count"`
-	Flag   uint32 `json:"flag"`
+	Player int     `json:"player"`
+	Count  int     `json:"count"`
+	Places []Place `json:"places"`
 }
 
 func ReadMessageSelectPlace(b *bytes.Buffer) (msg MessageSelectPlace) {
 	msg.Player = int(readUint8(b))
 	msg.Count = int(readUint8(b))
-	msg.Flag = readUint32(b)
+	msg.Places = parsePlaceFlag(readUint32(b))
 	return
 }
 
-func (MessageSelectPlace) Type() MessageType {
+func (MessageSelectPlace) messageType() MessageType {
 	return MessageTypeSelectPlace
 }
 
 type MessageSelectPosition struct {
-	Player    int    `json:"player"`
-	Code      uint32 `json:"code"`
-	Positions uint8  `json:"positions"`
+	Player    int        `json:"player"`
+	Code      uint32     `json:"code"`
+	Positions []Position `json:"positions"`
 }
 
 func ReadMessageSelectPosition(b *bytes.Buffer) (msg MessageSelectPosition) {
 	msg.Player = int(readUint8(b))
 	msg.Code = readUint32(b)
-	msg.Positions = readUint8(b)
+	msg.Positions = parseCorePositions(corePosition(readUint8(b)))
 	return
 }
 
-func (MessageSelectPosition) Type() MessageType {
+func (MessageSelectPosition) messageType() MessageType {
 	return MessageTypeSelectPosition
 }
 
@@ -942,19 +815,20 @@ func ReadMessageSelectTribute(b *bytes.Buffer) (msg MessageSelectTribute) {
 	msg.Max = int(readUint32(b))
 
 	tributeSize := readUint32(b)
-	for i := 0; i < int(tributeSize); i++ {
-		msg.Cards = append(msg.Cards, TributeCardInfo{
+	msg.Cards = make([]TributeCardInfo, tributeSize)
+	for i := range msg.Cards {
+		msg.Cards[i] = TributeCardInfo{
 			Code:         int(readUint32(b)),
 			Controller:   int(readUint8(b)),
 			Location:     parseCoreLocation(coreLocation(readUint8(b))),
 			Sequence:     int(readUint32(b)),
 			ReleaseParam: int(readUint8(b)),
-		})
+		}
 	}
 	return
 }
 
-func (MessageSelectTribute) Type() MessageType {
+func (MessageSelectTribute) messageType() MessageType {
 	return MessageTypeSelectTribute
 }
 
@@ -966,18 +840,19 @@ type MessageSortChain struct {
 func ReadMessageSortChain(b *bytes.Buffer) (msg MessageSortChain) {
 	msg.Player = int(readUint8(b))
 	cardsSize := readUint32(b)
-	for i := 0; i < int(cardsSize); i++ {
-		msg.Cards = append(msg.Cards, CardInfo{
+	msg.Cards = make([]CardInfo, cardsSize)
+	for i := range msg.Cards {
+		msg.Cards[i] = CardInfo{
 			Code:       int(readUint32(b)),
 			Controller: int(readUint8(b)),
 			Location:   parseCoreLocation(coreLocation(readUint8(b))),
 			Sequence:   int(readUint32(b)),
-		})
+		}
 	}
 	return
 }
 
-func (MessageSortChain) Type() MessageType {
+func (MessageSortChain) messageType() MessageType {
 	return MessageTypeSortChain
 }
 
@@ -993,19 +868,20 @@ func ReadMessageSelectCounter(b *bytes.Buffer) (msg MessageSelectCounter) {
 	msg.CounterType = int(readUint16(b))
 	msg.Count = int(readUint16(b))
 	cardsSize := readUint32(b)
-	for i := 0; i < int(cardsSize); i++ {
-		msg.Cards = append(msg.Cards, CounterCardInfo{
+	msg.Cards = make([]CounterCardInfo, cardsSize)
+	for i := range msg.Cards {
+		msg.Cards[i] = CounterCardInfo{
 			Code:       int(readUint32(b)),
 			Controller: int(readUint8(b)),
 			Location:   parseCoreLocation(coreLocation(readUint8(b))),
 			Sequence:   int(readUint8(b)),
 			Count:      int(readUint16(b)),
-		})
+		}
 	}
 	return
 }
 
-func (MessageSelectCounter) Type() MessageType {
+func (MessageSelectCounter) messageType() MessageType {
 	return MessageTypeSelectCounter
 }
 
@@ -1026,29 +902,31 @@ func ReadMessageSelectSum(b *bytes.Buffer) (msg MessageSelectSum) {
 	msg.Min = int(readUint32(b))
 	msg.Max = int(readUint32(b))
 	mustSelectsSize := readUint32(b)
-	for i := 0; i < int(mustSelectsSize); i++ {
-		msg.MustSelects = append(msg.MustSelects, CounterCardInfo{
+	msg.MustSelects = make([]CounterCardInfo, mustSelectsSize)
+	for i := range msg.MustSelects {
+		msg.MustSelects[i] = CounterCardInfo{
 			Code:       int(readUint32(b)),
 			Controller: int(readUint8(b)),
 			Location:   parseCoreLocation(coreLocation(readUint8(b))),
 			Sequence:   int(readUint32(b)),
 			Count:      int(readUint32(b)),
-		})
+		}
 	}
 	selectsSize := readUint32(b)
-	for i := 0; i < int(selectsSize); i++ {
-		msg.Selects = append(msg.Selects, CounterCardInfo{
+	msg.Selects = make([]CounterCardInfo, selectsSize)
+	for i := range msg.Selects {
+		msg.Selects[i] = CounterCardInfo{
 			Code:       int(readUint32(b)),
 			Controller: int(readUint8(b)),
 			Location:   parseCoreLocation(coreLocation(readUint8(b))),
 			Sequence:   int(readUint32(b)),
 			Count:      int(readUint32(b)),
-		})
+		}
 	}
 	return
 }
 
-func (MessageSelectSum) Type() MessageType {
+func (MessageSelectSum) messageType() MessageType {
 	return MessageTypeSelectSum
 }
 
@@ -1065,7 +943,7 @@ func ReadMessageSelectDisfield(b *bytes.Buffer) (msg MessageSelectDisfield) {
 	return
 }
 
-func (MessageSelectDisfield) Type() MessageType {
+func (MessageSelectDisfield) messageType() MessageType {
 	return MessageTypeSelectDisfield
 }
 
@@ -1077,18 +955,19 @@ type MessageSortCard struct {
 func ReadMessageSortCard(b *bytes.Buffer) (msg MessageSortCard) {
 	msg.Player = int(readUint8(b))
 	cardsSize := readUint32(b)
-	for i := 0; i < int(cardsSize); i++ {
-		msg.Cards = append(msg.Cards, CardInfo{
+	msg.Cards = make([]CardInfo, cardsSize)
+	for i := range msg.Cards {
+		msg.Cards[i] = CardInfo{
 			Code:       int(readUint32(b)),
 			Controller: int(readUint8(b)),
 			Location:   parseCoreLocation(coreLocation(readUint8(b))),
 			Sequence:   int(readUint32(b)),
-		})
+		}
 	}
 	return
 }
 
-func (MessageSortCard) Type() MessageType {
+func (MessageSortCard) messageType() MessageType {
 	return MessageTypeSortCard
 }
 
@@ -1108,34 +987,27 @@ func ReadMessageSelectUnselectCard(b *bytes.Buffer) (msg MessageSelectUnselectCa
 	msg.Cancellable = readUint8(b) != 0
 	msg.Min = int(readUint32(b))
 	msg.Max = int(readUint32(b))
+
 	selectsSize := readUint32(b)
-	for i := 0; i < int(selectsSize); i++ {
-		code := readUint32(b)
-		loc := readCardLocation(b)
-		msg.Selects = append(msg.Selects, FieldCardInfo{
-			Code:       int(code),
-			Controller: loc.controller,
-			Location:   parseCoreLocation(loc.location),
-			Sequence:   loc.sequence,
-			Position:   loc.position,
-		})
+	msg.Selects = make([]FieldCardInfo, selectsSize)
+	for i := range msg.Selects {
+		msg.Selects[i] = FieldCardInfo{
+			Code:         int(readUint32(b)),
+			CardLocation: parseCardLocation(readCardLocation(b)),
+		}
 	}
 	unselectsSize := readUint32(b)
-	for i := 0; i < int(unselectsSize); i++ {
-		code := readUint32(b)
-		loc := readCardLocation(b)
-		msg.Selects = append(msg.Selects, FieldCardInfo{
-			Code:       int(code),
-			Controller: loc.controller,
-			Location:   parseCoreLocation(loc.location),
-			Sequence:   loc.sequence,
-			Position:   loc.position,
-		})
+	msg.Unselects = make([]FieldCardInfo, unselectsSize)
+	for i := range msg.Unselects {
+		msg.Unselects[i] = FieldCardInfo{
+			Code:         int(readUint32(b)),
+			CardLocation: parseCardLocation(readCardLocation(b)),
+		}
 	}
 	return
 }
 
-func (MessageSelectUnselectCard) Type() MessageType {
+func (MessageSelectUnselectCard) messageType() MessageType {
 	return MessageTypeSelectUnselectCard
 }
 
@@ -1147,18 +1019,19 @@ type MessageConfirmDeckTop struct {
 func ReadMessageConfirmDeckTop(b *bytes.Buffer) (msg MessageConfirmDeckTop) {
 	msg.Player = int(readUint8(b))
 	cardsSize := readUint32(b)
-	for i := 0; i < int(cardsSize); i++ {
-		msg.Cards = append(msg.Cards, CardInfo{
+	msg.Cards = make([]CardInfo, cardsSize)
+	for i := range msg.Cards {
+		msg.Cards[i] = CardInfo{
 			Code:       int(readUint32(b)),
 			Controller: int(readUint8(b)),
 			Location:   parseCoreLocation(coreLocation(readUint8(b))),
 			Sequence:   int(readUint32(b)),
-		})
+		}
 	}
 	return
 }
 
-func (MessageConfirmDeckTop) Type() MessageType {
+func (MessageConfirmDeckTop) messageType() MessageType {
 	return MessageTypeConfirmDeckTop
 }
 
@@ -1170,18 +1043,19 @@ type MessageConfirmCards struct {
 func ReadMessageConfirmCards(b *bytes.Buffer) (msg MessageConfirmCards) {
 	msg.Player = int(readUint8(b))
 	cardsSize := readUint32(b)
-	for i := 0; i < int(cardsSize); i++ {
-		msg.Cards = append(msg.Cards, CardInfo{
+	msg.Cards = make([]CardInfo, cardsSize)
+	for i := range msg.Cards {
+		msg.Cards[i] = CardInfo{
 			Code:       int(readUint32(b)),
 			Controller: int(readUint8(b)),
 			Location:   parseCoreLocation(coreLocation(readUint8(b))),
 			Sequence:   int(readUint32(b)),
-		})
+		}
 	}
 	return
 }
 
-func (MessageConfirmCards) Type() MessageType {
+func (MessageConfirmCards) messageType() MessageType {
 	return MessageTypeConfirmCards
 }
 
@@ -1194,7 +1068,7 @@ func ReadMessageShuffleDeck(b *bytes.Buffer) (msg MessageShuffleDeck) {
 	return
 }
 
-func (MessageShuffleDeck) Type() MessageType {
+func (MessageShuffleDeck) messageType() MessageType {
 	return MessageTypeShuffleDeck
 }
 
@@ -1206,7 +1080,7 @@ func ReadMessageShuffleHand(b *bytes.Buffer) (msg MessageShuffleHand) {
 	panic("not implemented")
 }
 
-func (MessageShuffleHand) Type() MessageType {
+func (MessageShuffleHand) messageType() MessageType {
 	return MessageTypeShuffleHand
 }
 
@@ -1218,7 +1092,7 @@ func ReadMessageRefreshDeck(b *bytes.Buffer) (msg MessageRefreshDeck) {
 	panic("not implemented")
 }
 
-func (MessageRefreshDeck) Type() MessageType {
+func (MessageRefreshDeck) messageType() MessageType {
 	return MessageTypeRefreshDeck
 }
 
@@ -1230,7 +1104,7 @@ func ReadMessageSwapGraveDeck(b *bytes.Buffer) (msg MessageSwapGraveDeck) {
 	panic("not implemented")
 }
 
-func (MessageSwapGraveDeck) Type() MessageType {
+func (MessageSwapGraveDeck) messageType() MessageType {
 	return MessageTypeSwapGraveDeck
 }
 
@@ -1242,7 +1116,7 @@ func ReadMessageShuffleSetCard(b *bytes.Buffer) (msg MessageShuffleSetCard) {
 	panic("not implemented")
 }
 
-func (MessageShuffleSetCard) Type() MessageType {
+func (MessageShuffleSetCard) messageType() MessageType {
 	return MessageTypeShuffleSetCard
 }
 
@@ -1254,7 +1128,7 @@ func ReadMessageReverseDeck(b *bytes.Buffer) (msg MessageReverseDeck) {
 	panic("not implemented")
 }
 
-func (MessageReverseDeck) Type() MessageType {
+func (MessageReverseDeck) messageType() MessageType {
 	return MessageTypeReverseDeck
 }
 
@@ -1266,7 +1140,7 @@ func ReadMessageDeckTop(b *bytes.Buffer) (msg MessageDeckTop) {
 	panic("not implemented")
 }
 
-func (MessageDeckTop) Type() MessageType {
+func (MessageDeckTop) messageType() MessageType {
 	return MessageTypeDeckTop
 }
 
@@ -1278,7 +1152,7 @@ func ReadMessageShuffleExtra(b *bytes.Buffer) (msg MessageShuffleExtra) {
 	panic("not implemented")
 }
 
-func (MessageShuffleExtra) Type() MessageType {
+func (MessageShuffleExtra) messageType() MessageType {
 	return MessageTypeShuffleExtra
 }
 
@@ -1291,7 +1165,7 @@ func ReadMessageNewTurn(b *bytes.Buffer) (msg MessageNewTurn) {
 	return
 }
 
-func (MessageNewTurn) Type() MessageType {
+func (MessageNewTurn) messageType() MessageType {
 	return MessageTypeNewTurn
 }
 
@@ -1307,7 +1181,7 @@ func ReadMessageNewPhase(b *bytes.Buffer) (msg MessageNewPhase) {
 	return
 }
 
-func (MessageNewPhase) Type() MessageType {
+func (MessageNewPhase) messageType() MessageType {
 	return MessageTypeNewPhase
 }
 
@@ -1319,19 +1193,25 @@ func ReadMessageConfirmExtraTop(b *bytes.Buffer) (msg MessageConfirmExtraTop) {
 	panic("not implemented")
 }
 
-func (MessageConfirmExtraTop) Type() MessageType {
+func (MessageConfirmExtraTop) messageType() MessageType {
 	return MessageTypeConfirmExtraTop
 }
 
 type MessageMove struct {
+	Card     FieldCardInfo `json:"card"`
+	Previous CardLocation  `json:"previous"`
+	Reason   uint32        `json:"reason"`
 }
 
 func ReadMessageMove(b *bytes.Buffer) (msg MessageMove) {
-	// TODO: implement
-	panic("not implemented")
+	msg.Card.Code = int(readUint32(b))
+	msg.Card.CardLocation = parseCardLocation(readCardLocation(b))
+	msg.Previous = parseCardLocation(readCardLocation(b))
+	msg.Reason = readUint32(b)
+	return
 }
 
-func (MessageMove) Type() MessageType {
+func (MessageMove) messageType() MessageType {
 	return MessageTypeMove
 }
 
@@ -1343,7 +1223,7 @@ func ReadMessagePosChange(b *bytes.Buffer) (msg MessagePosChange) {
 	panic("not implemented")
 }
 
-func (MessagePosChange) Type() MessageType {
+func (MessagePosChange) messageType() MessageType {
 	return MessageTypePosChange
 }
 
@@ -1355,7 +1235,7 @@ func ReadMessageSet(b *bytes.Buffer) (msg MessageSet) {
 	panic("not implemented")
 }
 
-func (MessageSet) Type() MessageType {
+func (MessageSet) messageType() MessageType {
 	return MessageTypeSet
 }
 
@@ -1367,7 +1247,7 @@ func ReadMessageSwap(b *bytes.Buffer) (msg MessageSwap) {
 	panic("not implemented")
 }
 
-func (MessageSwap) Type() MessageType {
+func (MessageSwap) messageType() MessageType {
 	return MessageTypeSwap
 }
 
@@ -1379,55 +1259,55 @@ func ReadMessageFieldDisabled(b *bytes.Buffer) (msg MessageFieldDisabled) {
 	panic("not implemented")
 }
 
-func (MessageFieldDisabled) Type() MessageType {
+func (MessageFieldDisabled) messageType() MessageType {
 	return MessageTypeFieldDisabled
 }
 
 type MessageSummoning struct {
+	Card FieldCardInfo `json:"card"`
 }
 
 func ReadMessageSummoning(b *bytes.Buffer) (msg MessageSummoning) {
-	// TODO: implement
-	panic("not implemented")
+	msg.Card.Code = int(readUint32(b))
+	msg.Card.CardLocation = parseCardLocation(readCardLocation(b))
+	return
 }
 
-func (MessageSummoning) Type() MessageType {
+func (MessageSummoning) messageType() MessageType {
 	return MessageTypeSummoning
 }
 
-type MessageSummoned struct {
+type MessageSummoned struct{}
+
+func ReadMessageSummoned(*bytes.Buffer) (msg MessageSummoned) {
+	return
 }
 
-func ReadMessageSummoned(b *bytes.Buffer) (msg MessageSummoned) {
-	// TODO: implement
-	panic("not implemented")
-}
-
-func (MessageSummoned) Type() MessageType {
+func (MessageSummoned) messageType() MessageType {
 	return MessageTypeSummoned
 }
 
 type MessageSPSummoning struct {
+	Card FieldCardInfo `json:"card"`
 }
 
 func ReadMessageSPSummoning(b *bytes.Buffer) (msg MessageSPSummoning) {
-	// TODO: implement
-	panic("not implemented")
+	msg.Card.Code = int(readUint32(b))
+	msg.Card.CardLocation = parseCardLocation(readCardLocation(b))
+	return
 }
 
-func (MessageSPSummoning) Type() MessageType {
+func (MessageSPSummoning) messageType() MessageType {
 	return MessageTypeSPSummoning
 }
 
-type MessageSPSummoned struct {
+type MessageSPSummoned struct{}
+
+func ReadMessageSPSummoned(*bytes.Buffer) (msg MessageSPSummoned) {
+	return
 }
 
-func ReadMessageSPSummoned(b *bytes.Buffer) (msg MessageSPSummoned) {
-	// TODO: implement
-	panic("not implemented")
-}
-
-func (MessageSPSummoned) Type() MessageType {
+func (MessageSPSummoned) messageType() MessageType {
 	return MessageTypeSPSummoned
 }
 
@@ -1439,7 +1319,7 @@ func ReadMessageFlipSummoning(b *bytes.Buffer) (msg MessageFlipSummoning) {
 	panic("not implemented")
 }
 
-func (MessageFlipSummoning) Type() MessageType {
+func (MessageFlipSummoning) messageType() MessageType {
 	return MessageTypeFlipSummoning
 }
 
@@ -1451,67 +1331,80 @@ func ReadMessageFlipSummoned(b *bytes.Buffer) (msg MessageFlipSummoned) {
 	panic("not implemented")
 }
 
-func (MessageFlipSummoned) Type() MessageType {
+func (MessageFlipSummoned) messageType() MessageType {
 	return MessageTypeFlipSummoned
 }
 
 type MessageChaining struct {
+	Card              FieldCardInfo `json:"card"`
+	TriggerController int           `json:"trigger_controller"`
+	TriggerLocation   Location      `json:"trigger_location"`
+	TriggerSequence   int           `json:"trigger_sequence"`
+	Description       uint64        `json:"description"`
+	Count             int           `json:"count"`
 }
 
 func ReadMessageChaining(b *bytes.Buffer) (msg MessageChaining) {
-	// TODO: implement
-	panic("not implemented")
+	msg.Card.Code = int(readUint32(b))
+	msg.Card.CardLocation = parseCardLocation(readCardLocation(b))
+	msg.TriggerController = int(readUint8(b))
+	msg.TriggerLocation = parseCoreLocation(coreLocation(readUint8(b)))
+	msg.TriggerSequence = int(readUint8(b))
+	msg.Description = readUint64(b)
+	msg.Count = int(readUint32(b))
+	return
 }
 
-func (MessageChaining) Type() MessageType {
+func (MessageChaining) messageType() MessageType {
 	return MessageTypeChaining
 }
 
 type MessageChained struct {
+	Count int `json:"count"`
 }
 
 func ReadMessageChained(b *bytes.Buffer) (msg MessageChained) {
-	// TODO: implement
-	panic("not implemented")
+	msg.Count = int(readUint8(b))
+	return
 }
 
-func (MessageChained) Type() MessageType {
+func (MessageChained) messageType() MessageType {
 	return MessageTypeChained
 }
 
 type MessageChainSolving struct {
+	Count int `json:"count"`
 }
 
 func ReadMessageChainSolving(b *bytes.Buffer) (msg MessageChainSolving) {
-	// TODO: implement
-	panic("not implemented")
+	msg.Count = int(readUint8(b))
+	return
 }
 
-func (MessageChainSolving) Type() MessageType {
+func (MessageChainSolving) messageType() MessageType {
 	return MessageTypeChainSolving
 }
 
 type MessageChainSolved struct {
+	Count int `json:"count"`
 }
 
 func ReadMessageChainSolved(b *bytes.Buffer) (msg MessageChainSolved) {
-	// TODO: implement
-	panic("not implemented")
+	msg.Count = int(readUint8(b))
+	return
 }
 
-func (MessageChainSolved) Type() MessageType {
+func (MessageChainSolved) messageType() MessageType {
 	return MessageTypeChainSolved
 }
 
-type MessageChainEnd struct {
+type MessageChainEnd struct{}
+
+func ReadMessageChainEnd(*bytes.Buffer) (msg MessageChainEnd) {
+	return
 }
 
-func ReadMessageChainEnd(b *bytes.Buffer) (msg MessageChainEnd) {
-	// TODO: implement
-	panic("not implemented")
-}
-
-func (MessageChainEnd) Type() MessageType {
+func (MessageChainEnd) messageType() MessageType {
 	return MessageTypeChainEnd
 }
 
@@ -1523,7 +1416,7 @@ func ReadMessageChainNegated(b *bytes.Buffer) (msg MessageChainNegated) {
 	panic("not implemented")
 }
 
-func (MessageChainNegated) Type() MessageType {
+func (MessageChainNegated) messageType() MessageType {
 	return MessageTypeChainNegated
 }
 
@@ -1535,7 +1428,7 @@ func ReadMessageChainDisabled(b *bytes.Buffer) (msg MessageChainDisabled) {
 	panic("not implemented")
 }
 
-func (MessageChainDisabled) Type() MessageType {
+func (MessageChainDisabled) messageType() MessageType {
 	return MessageTypeChainDisabled
 }
 
@@ -1547,7 +1440,7 @@ func ReadMessageCardSelected(b *bytes.Buffer) (msg MessageCardSelected) {
 	panic("not implemented")
 }
 
-func (MessageCardSelected) Type() MessageType {
+func (MessageCardSelected) messageType() MessageType {
 	return MessageTypeCardSelected
 }
 
@@ -1559,19 +1452,24 @@ func ReadMessageRandomSelected(b *bytes.Buffer) (msg MessageRandomSelected) {
 	panic("not implemented")
 }
 
-func (MessageRandomSelected) Type() MessageType {
+func (MessageRandomSelected) messageType() MessageType {
 	return MessageTypeRandomSelected
 }
 
 type MessageBecomeTarget struct {
+	Targets []CardLocation `json:"targets"`
 }
 
 func ReadMessageBecomeTarget(b *bytes.Buffer) (msg MessageBecomeTarget) {
-	// TODO: implement
-	panic("not implemented")
+	targetsLen := readUint32(b)
+	msg.Targets = make([]CardLocation, targetsLen)
+	for i := range msg.Targets {
+		msg.Targets[i] = parseCardLocation(readCardLocation(b))
+	}
+	return
 }
 
-func (MessageBecomeTarget) Type() MessageType {
+func (MessageBecomeTarget) messageType() MessageType {
 	return MessageTypeBecomeTarget
 }
 
@@ -1583,16 +1481,17 @@ type MessageDraw struct {
 func ReadMessageDraw(b *bytes.Buffer) (msg MessageDraw) {
 	msg.Player = int(readUint8(b))
 	cardsSize := readUint32(b)
-	for i := 0; i < int(cardsSize); i++ {
-		msg.Cards = append(msg.Cards, DrawnCardInfo{
+	msg.Cards = make([]DrawnCardInfo, cardsSize)
+	for i := range msg.Cards {
+		msg.Cards[i] = DrawnCardInfo{
 			Code:     int(readUint32(b)),
-			Position: corePosition(readUint32(b)),
-		})
+			Position: parseCorePosition(corePosition(readUint32(b))).Face(),
+		}
 	}
 	return
 }
 
-func (MessageDraw) Type() MessageType {
+func (MessageDraw) messageType() MessageType {
 	return MessageTypeDraw
 }
 
@@ -1604,7 +1503,7 @@ func ReadMessageDamage(b *bytes.Buffer) (msg MessageDamage) {
 	panic("not implemented")
 }
 
-func (MessageDamage) Type() MessageType {
+func (MessageDamage) messageType() MessageType {
 	return MessageTypeDamage
 }
 
@@ -1616,7 +1515,7 @@ func ReadMessageRecover(b *bytes.Buffer) (msg MessageRecover) {
 	panic("not implemented")
 }
 
-func (MessageRecover) Type() MessageType {
+func (MessageRecover) messageType() MessageType {
 	return MessageTypeRecover
 }
 
@@ -1628,7 +1527,7 @@ func ReadMessageEquip(b *bytes.Buffer) (msg MessageEquip) {
 	panic("not implemented")
 }
 
-func (MessageEquip) Type() MessageType {
+func (MessageEquip) messageType() MessageType {
 	return MessageTypeEquip
 }
 
@@ -1640,7 +1539,7 @@ func ReadMessageLPUpdate(b *bytes.Buffer) (msg MessageLPUpdate) {
 	panic("not implemented")
 }
 
-func (MessageLPUpdate) Type() MessageType {
+func (MessageLPUpdate) messageType() MessageType {
 	return MessageTypeLPUpdate
 }
 
@@ -1652,7 +1551,7 @@ func ReadMessageUnequip(b *bytes.Buffer) (msg MessageUnequip) {
 	panic("not implemented")
 }
 
-func (MessageUnequip) Type() MessageType {
+func (MessageUnequip) messageType() MessageType {
 	return MessageTypeUnequip
 }
 
@@ -1664,7 +1563,7 @@ func ReadMessageCardTarget(b *bytes.Buffer) (msg MessageCardTarget) {
 	panic("not implemented")
 }
 
-func (MessageCardTarget) Type() MessageType {
+func (MessageCardTarget) messageType() MessageType {
 	return MessageTypeCardTarget
 }
 
@@ -1676,7 +1575,7 @@ func ReadMessageCancelTarget(b *bytes.Buffer) (msg MessageCancelTarget) {
 	panic("not implemented")
 }
 
-func (MessageCancelTarget) Type() MessageType {
+func (MessageCancelTarget) messageType() MessageType {
 	return MessageTypeCancelTarget
 }
 
@@ -1688,7 +1587,7 @@ func ReadMessagePayLPCost(b *bytes.Buffer) (msg MessagePayLPCost) {
 	panic("not implemented")
 }
 
-func (MessagePayLPCost) Type() MessageType {
+func (MessagePayLPCost) messageType() MessageType {
 	return MessageTypePayLPCost
 }
 
@@ -1700,7 +1599,7 @@ func ReadMessageAddCounter(b *bytes.Buffer) (msg MessageAddCounter) {
 	panic("not implemented")
 }
 
-func (MessageAddCounter) Type() MessageType {
+func (MessageAddCounter) messageType() MessageType {
 	return MessageTypeAddCounter
 }
 
@@ -1712,7 +1611,7 @@ func ReadMessageRemoveCounter(b *bytes.Buffer) (msg MessageRemoveCounter) {
 	panic("not implemented")
 }
 
-func (MessageRemoveCounter) Type() MessageType {
+func (MessageRemoveCounter) messageType() MessageType {
 	return MessageTypeRemoveCounter
 }
 
@@ -1724,7 +1623,7 @@ func ReadMessageAttack(b *bytes.Buffer) (msg MessageAttack) {
 	panic("not implemented")
 }
 
-func (MessageAttack) Type() MessageType {
+func (MessageAttack) messageType() MessageType {
 	return MessageTypeAttack
 }
 
@@ -1736,7 +1635,7 @@ func ReadMessageBattle(b *bytes.Buffer) (msg MessageBattle) {
 	panic("not implemented")
 }
 
-func (MessageBattle) Type() MessageType {
+func (MessageBattle) messageType() MessageType {
 	return MessageTypeBattle
 }
 
@@ -1748,7 +1647,7 @@ func ReadMessageAttackDisabled(b *bytes.Buffer) (msg MessageAttackDisabled) {
 	panic("not implemented")
 }
 
-func (MessageAttackDisabled) Type() MessageType {
+func (MessageAttackDisabled) messageType() MessageType {
 	return MessageTypeAttackDisabled
 }
 
@@ -1760,7 +1659,7 @@ func ReadMessageDamageStepStart(b *bytes.Buffer) (msg MessageDamageStepStart) {
 	panic("not implemented")
 }
 
-func (MessageDamageStepStart) Type() MessageType {
+func (MessageDamageStepStart) messageType() MessageType {
 	return MessageTypeDamageStepStart
 }
 
@@ -1772,7 +1671,7 @@ func ReadMessageDamageStepEnd(b *bytes.Buffer) (msg MessageDamageStepEnd) {
 	panic("not implemented")
 }
 
-func (MessageDamageStepEnd) Type() MessageType {
+func (MessageDamageStepEnd) messageType() MessageType {
 	return MessageTypeDamageStepEnd
 }
 
@@ -1784,7 +1683,7 @@ func ReadMessageMissedEffect(b *bytes.Buffer) (msg MessageMissedEffect) {
 	panic("not implemented")
 }
 
-func (MessageMissedEffect) Type() MessageType {
+func (MessageMissedEffect) messageType() MessageType {
 	return MessageTypeMissedEffect
 }
 
@@ -1796,7 +1695,7 @@ func ReadMessageBeChainTarget(b *bytes.Buffer) (msg MessageBeChainTarget) {
 	panic("not implemented")
 }
 
-func (MessageBeChainTarget) Type() MessageType {
+func (MessageBeChainTarget) messageType() MessageType {
 	return MessageTypeBeChainTarget
 }
 
@@ -1808,7 +1707,7 @@ func ReadMessageCreateRelation(b *bytes.Buffer) (msg MessageCreateRelation) {
 	panic("not implemented")
 }
 
-func (MessageCreateRelation) Type() MessageType {
+func (MessageCreateRelation) messageType() MessageType {
 	return MessageTypeCreateRelation
 }
 
@@ -1820,7 +1719,7 @@ func ReadMessageReleaseRelation(b *bytes.Buffer) (msg MessageReleaseRelation) {
 	panic("not implemented")
 }
 
-func (MessageReleaseRelation) Type() MessageType {
+func (MessageReleaseRelation) messageType() MessageType {
 	return MessageTypeReleaseRelation
 }
 
@@ -1832,7 +1731,7 @@ func ReadMessageTossCoin(b *bytes.Buffer) (msg MessageTossCoin) {
 	panic("not implemented")
 }
 
-func (MessageTossCoin) Type() MessageType {
+func (MessageTossCoin) messageType() MessageType {
 	return MessageTypeTossCoin
 }
 
@@ -1844,7 +1743,7 @@ func ReadMessageTossDice(b *bytes.Buffer) (msg MessageTossDice) {
 	panic("not implemented")
 }
 
-func (MessageTossDice) Type() MessageType {
+func (MessageTossDice) messageType() MessageType {
 	return MessageTypeTossDice
 }
 
@@ -1856,7 +1755,7 @@ func ReadMessageRockPaperScissors(b *bytes.Buffer) (msg MessageRockPaperScissors
 	panic("not implemented")
 }
 
-func (MessageRockPaperScissors) Type() MessageType {
+func (MessageRockPaperScissors) messageType() MessageType {
 	return MessageTypeRockPaperScissors
 }
 
@@ -1868,7 +1767,7 @@ func ReadMessageHandRes(b *bytes.Buffer) (msg MessageHandRes) {
 	panic("not implemented")
 }
 
-func (MessageHandRes) Type() MessageType {
+func (MessageHandRes) messageType() MessageType {
 	return MessageTypeHandRes
 }
 
@@ -1880,7 +1779,7 @@ func ReadMessageAnnounceRace(b *bytes.Buffer) (msg MessageAnnounceRace) {
 	panic("not implemented")
 }
 
-func (MessageAnnounceRace) Type() MessageType {
+func (MessageAnnounceRace) messageType() MessageType {
 	return MessageTypeAnnounceRace
 }
 
@@ -1892,7 +1791,7 @@ func ReadMessageAnnounceAttribute(b *bytes.Buffer) (msg MessageAnnounceAttribute
 	panic("not implemented")
 }
 
-func (MessageAnnounceAttribute) Type() MessageType {
+func (MessageAnnounceAttribute) messageType() MessageType {
 	return MessageTypeAnnounceAttribute
 }
 
@@ -1904,7 +1803,7 @@ func ReadMessageAnnounceCard(b *bytes.Buffer) (msg MessageAnnounceCard) {
 	panic("not implemented")
 }
 
-func (MessageAnnounceCard) Type() MessageType {
+func (MessageAnnounceCard) messageType() MessageType {
 	return MessageTypeAnnounceCard
 }
 
@@ -1916,7 +1815,7 @@ func ReadMessageAnnounceNumber(b *bytes.Buffer) (msg MessageAnnounceNumber) {
 	panic("not implemented")
 }
 
-func (MessageAnnounceNumber) Type() MessageType {
+func (MessageAnnounceNumber) messageType() MessageType {
 	return MessageTypeAnnounceNumber
 }
 
@@ -1928,7 +1827,7 @@ func ReadMessageCardHint(b *bytes.Buffer) (msg MessageCardHint) {
 	panic("not implemented")
 }
 
-func (MessageCardHint) Type() MessageType {
+func (MessageCardHint) messageType() MessageType {
 	return MessageTypeCardHint
 }
 
@@ -1940,7 +1839,7 @@ func ReadMessageTagSwap(b *bytes.Buffer) (msg MessageTagSwap) {
 	panic("not implemented")
 }
 
-func (MessageTagSwap) Type() MessageType {
+func (MessageTagSwap) messageType() MessageType {
 	return MessageTypeTagSwap
 }
 
@@ -1952,7 +1851,7 @@ func ReadMessageReloadField(b *bytes.Buffer) (msg MessageReloadField) {
 	panic("not implemented")
 }
 
-func (MessageReloadField) Type() MessageType {
+func (MessageReloadField) messageType() MessageType {
 	return MessageTypeReloadField
 }
 
@@ -1964,7 +1863,7 @@ func ReadMessageAIName(b *bytes.Buffer) (msg MessageAIName) {
 	panic("not implemented")
 }
 
-func (MessageAIName) Type() MessageType {
+func (MessageAIName) messageType() MessageType {
 	return MessageTypeAIName
 }
 
@@ -1976,7 +1875,7 @@ func ReadMessageShowHint(b *bytes.Buffer) (msg MessageShowHint) {
 	panic("not implemented")
 }
 
-func (MessageShowHint) Type() MessageType {
+func (MessageShowHint) messageType() MessageType {
 	return MessageTypeShowHint
 }
 
@@ -1988,7 +1887,7 @@ func ReadMessagePlayerHint(b *bytes.Buffer) (msg MessagePlayerHint) {
 	panic("not implemented")
 }
 
-func (MessagePlayerHint) Type() MessageType {
+func (MessagePlayerHint) messageType() MessageType {
 	return MessageTypePlayerHint
 }
 
@@ -2000,7 +1899,7 @@ func ReadMessageMatchKill(b *bytes.Buffer) (msg MessageMatchKill) {
 	panic("not implemented")
 }
 
-func (MessageMatchKill) Type() MessageType {
+func (MessageMatchKill) messageType() MessageType {
 	return MessageTypeMatchKill
 }
 
@@ -2012,7 +1911,7 @@ func ReadMessageCustomMessage(b *bytes.Buffer) (msg MessageCustomMessage) {
 	panic("not implemented")
 }
 
-func (MessageCustomMessage) Type() MessageType {
+func (MessageCustomMessage) messageType() MessageType {
 	return MessageTypeCustomMessage
 }
 
@@ -2024,49 +1923,166 @@ func ReadMessageRemoveCards(b *bytes.Buffer) (msg MessageRemoveCards) {
 	panic("not implemented")
 }
 
-func (MessageRemoveCards) Type() MessageType {
+func (MessageRemoveCards) messageType() MessageType {
 	return MessageTypeRemoveCards
 }
 
-type jsonMessage struct {
-	Message
+type jsonMessageName struct {
+	MessageType MessageType `json:"message_type"`
 }
 
-func JSONMessage(m Message) interface{} {
-	return jsonMessage{Message: m}
-}
-
-func (m jsonMessage) MarshalJSON() ([]byte, error) {
+func MessageToJSON(m Message) ([]byte, error) {
 	structTypesCacheLock.Lock()
 	defer structTypesCacheLock.Unlock()
 
-	v := createStructTypesCache(m.Message)
-	v.Field(0).Set(reflect.ValueOf(m.Message))
+	v := createStructTypesCache(m.messageType(), reflect.TypeOf(m))
+	v.Field(0).Set(reflect.ValueOf(m))
 	return json.Marshal(v.Interface())
+}
+
+func JSONToMessage(b []byte) (Message, error) {
+	structTypesCacheLock.Lock()
+	defer structTypesCacheLock.Unlock()
+
+	var m jsonMessageName
+	err := json.Unmarshal(b, &m)
+	if err != nil {
+		return nil, err
+	}
+	typ, ok := messageUnmarshalMap[m.MessageType]
+	if !ok {
+		return nil, errors.New("type not found")
+	}
+	v := createStructTypesCache(m.MessageType, typ)
+	typV := reflect.New(v.Type())
+
+	err = json.Unmarshal(b, typV.Interface())
+	if err != nil {
+		return nil, err
+	}
+	return typV.Elem().Field(0).Interface().(Message), nil
+}
+
+var messageUnmarshalMap = map[MessageType]reflect.Type{
+	MessageTypeWaitingResponse:    reflect.TypeOf(MessageWaitingResponse{}),
+	MessageTypeRetry:              reflect.TypeOf(MessageRetry{}),
+	MessageTypeHint:               reflect.TypeOf(MessageHint{}),
+	MessageTypeWaiting:            reflect.TypeOf(MessageWaiting{}),
+	MessageTypeStart:              reflect.TypeOf(MessageStart{}),
+	MessageTypeWin:                reflect.TypeOf(MessageWin{}),
+	MessageTypeUpdateData:         reflect.TypeOf(MessageUpdateData{}),
+	MessageTypeUpdateCard:         reflect.TypeOf(MessageUpdateCard{}),
+	MessageTypeRequestDeck:        reflect.TypeOf(MessageRequestDeck{}),
+	MessageTypeSelectBattleCMD:    reflect.TypeOf(MessageSelectBattleCMD{}),
+	MessageTypeSelectIdleCMD:      reflect.TypeOf(MessageSelectIdleCMD{}),
+	MessageTypeSelectEffectYN:     reflect.TypeOf(MessageSelectEffectYN{}),
+	MessageTypeSelectYesNo:        reflect.TypeOf(MessageSelectYesNo{}),
+	MessageTypeSelectOption:       reflect.TypeOf(MessageSelectOption{}),
+	MessageTypeSelectCard:         reflect.TypeOf(MessageSelectCard{}),
+	MessageTypeSelectChain:        reflect.TypeOf(MessageSelectChain{}),
+	MessageTypeSelectPlace:        reflect.TypeOf(MessageSelectPlace{}),
+	MessageTypeSelectPosition:     reflect.TypeOf(MessageSelectPosition{}),
+	MessageTypeSelectTribute:      reflect.TypeOf(MessageSelectTribute{}),
+	MessageTypeSortChain:          reflect.TypeOf(MessageSortChain{}),
+	MessageTypeSelectCounter:      reflect.TypeOf(MessageSelectCounter{}),
+	MessageTypeSelectSum:          reflect.TypeOf(MessageSelectSum{}),
+	MessageTypeSelectDisfield:     reflect.TypeOf(MessageSelectDisfield{}),
+	MessageTypeSortCard:           reflect.TypeOf(MessageSortCard{}),
+	MessageTypeSelectUnselectCard: reflect.TypeOf(MessageSelectUnselectCard{}),
+	MessageTypeConfirmDeckTop:     reflect.TypeOf(MessageConfirmDeckTop{}),
+	MessageTypeConfirmCards:       reflect.TypeOf(MessageConfirmCards{}),
+	MessageTypeShuffleDeck:        reflect.TypeOf(MessageShuffleDeck{}),
+	MessageTypeShuffleHand:        reflect.TypeOf(MessageShuffleHand{}),
+	MessageTypeRefreshDeck:        reflect.TypeOf(MessageRefreshDeck{}),
+	MessageTypeSwapGraveDeck:      reflect.TypeOf(MessageSwapGraveDeck{}),
+	MessageTypeShuffleSetCard:     reflect.TypeOf(MessageShuffleSetCard{}),
+	MessageTypeReverseDeck:        reflect.TypeOf(MessageReverseDeck{}),
+	MessageTypeDeckTop:            reflect.TypeOf(MessageDeckTop{}),
+	MessageTypeShuffleExtra:       reflect.TypeOf(MessageShuffleExtra{}),
+	MessageTypeNewTurn:            reflect.TypeOf(MessageNewTurn{}),
+	MessageTypeNewPhase:           reflect.TypeOf(MessageNewPhase{}),
+	MessageTypeConfirmExtraTop:    reflect.TypeOf(MessageConfirmExtraTop{}),
+	MessageTypeMove:               reflect.TypeOf(MessageMove{}),
+	MessageTypePosChange:          reflect.TypeOf(MessagePosChange{}),
+	MessageTypeSet:                reflect.TypeOf(MessageSet{}),
+	MessageTypeSwap:               reflect.TypeOf(MessageSwap{}),
+	MessageTypeFieldDisabled:      reflect.TypeOf(MessageFieldDisabled{}),
+	MessageTypeSummoning:          reflect.TypeOf(MessageSummoning{}),
+	MessageTypeSummoned:           reflect.TypeOf(MessageSummoned{}),
+	MessageTypeSPSummoning:        reflect.TypeOf(MessageSPSummoning{}),
+	MessageTypeSPSummoned:         reflect.TypeOf(MessageSPSummoned{}),
+	MessageTypeFlipSummoning:      reflect.TypeOf(MessageFlipSummoning{}),
+	MessageTypeFlipSummoned:       reflect.TypeOf(MessageFlipSummoned{}),
+	MessageTypeChaining:           reflect.TypeOf(MessageChaining{}),
+	MessageTypeChained:            reflect.TypeOf(MessageChained{}),
+	MessageTypeChainSolving:       reflect.TypeOf(MessageChainSolving{}),
+	MessageTypeChainSolved:        reflect.TypeOf(MessageChainSolved{}),
+	MessageTypeChainEnd:           reflect.TypeOf(MessageChainEnd{}),
+	MessageTypeChainNegated:       reflect.TypeOf(MessageChainNegated{}),
+	MessageTypeChainDisabled:      reflect.TypeOf(MessageChainDisabled{}),
+	MessageTypeCardSelected:       reflect.TypeOf(MessageCardSelected{}),
+	MessageTypeRandomSelected:     reflect.TypeOf(MessageRandomSelected{}),
+	MessageTypeBecomeTarget:       reflect.TypeOf(MessageBecomeTarget{}),
+	MessageTypeDraw:               reflect.TypeOf(MessageDraw{}),
+	MessageTypeDamage:             reflect.TypeOf(MessageDamage{}),
+	MessageTypeRecover:            reflect.TypeOf(MessageRecover{}),
+	MessageTypeEquip:              reflect.TypeOf(MessageEquip{}),
+	MessageTypeLPUpdate:           reflect.TypeOf(MessageLPUpdate{}),
+	MessageTypeUnequip:            reflect.TypeOf(MessageUnequip{}),
+	MessageTypeCardTarget:         reflect.TypeOf(MessageCardTarget{}),
+	MessageTypeCancelTarget:       reflect.TypeOf(MessageCancelTarget{}),
+	MessageTypePayLPCost:          reflect.TypeOf(MessagePayLPCost{}),
+	MessageTypeAddCounter:         reflect.TypeOf(MessageAddCounter{}),
+	MessageTypeRemoveCounter:      reflect.TypeOf(MessageRemoveCounter{}),
+	MessageTypeAttack:             reflect.TypeOf(MessageAttack{}),
+	MessageTypeBattle:             reflect.TypeOf(MessageBattle{}),
+	MessageTypeAttackDisabled:     reflect.TypeOf(MessageAttackDisabled{}),
+	MessageTypeDamageStepStart:    reflect.TypeOf(MessageDamageStepStart{}),
+	MessageTypeDamageStepEnd:      reflect.TypeOf(MessageDamageStepEnd{}),
+	MessageTypeMissedEffect:       reflect.TypeOf(MessageMissedEffect{}),
+	MessageTypeBeChainTarget:      reflect.TypeOf(MessageBeChainTarget{}),
+	MessageTypeCreateRelation:     reflect.TypeOf(MessageCreateRelation{}),
+	MessageTypeReleaseRelation:    reflect.TypeOf(MessageReleaseRelation{}),
+	MessageTypeTossCoin:           reflect.TypeOf(MessageTossCoin{}),
+	MessageTypeTossDice:           reflect.TypeOf(MessageTossDice{}),
+	MessageTypeRockPaperScissors:  reflect.TypeOf(MessageRockPaperScissors{}),
+	MessageTypeHandRes:            reflect.TypeOf(MessageHandRes{}),
+	MessageTypeAnnounceRace:       reflect.TypeOf(MessageAnnounceRace{}),
+	MessageTypeAnnounceAttribute:  reflect.TypeOf(MessageAnnounceAttribute{}),
+	MessageTypeAnnounceCard:       reflect.TypeOf(MessageAnnounceCard{}),
+	MessageTypeAnnounceNumber:     reflect.TypeOf(MessageAnnounceNumber{}),
+	MessageTypeCardHint:           reflect.TypeOf(MessageCardHint{}),
+	MessageTypeTagSwap:            reflect.TypeOf(MessageTagSwap{}),
+	MessageTypeReloadField:        reflect.TypeOf(MessageReloadField{}),
+	MessageTypeAIName:             reflect.TypeOf(MessageAIName{}),
+	MessageTypeShowHint:           reflect.TypeOf(MessageShowHint{}),
+	MessageTypePlayerHint:         reflect.TypeOf(MessagePlayerHint{}),
+	MessageTypeMatchKill:          reflect.TypeOf(MessageMatchKill{}),
+	MessageTypeCustomMessage:      reflect.TypeOf(MessageCustomMessage{}),
+	MessageTypeRemoveCards:        reflect.TypeOf(MessageRemoveCards{}),
 }
 
 var structTypesCacheLock sync.Mutex
 var structTypesCache = map[MessageType]reflect.Value{}
 
-func createStructTypesCache(m Message) reflect.Value {
-	messageType := m.Type()
+func createStructTypesCache(messageType MessageType, typ reflect.Type) reflect.Value {
 	if x, ok := structTypesCache[messageType]; ok {
 		return x
 	}
 	t := reflect.StructOf([]reflect.StructField{
 		{
-			Name:      reflect.TypeOf(m).Name(),
-			Type:      reflect.TypeOf(m),
+			Name:      typ.Name(),
+			Type:      typ,
 			Anonymous: true,
 		},
 		{
-			Name: "Type",
+			Name: "MessageType",
 			Type: reflect.TypeOf(""),
 			Tag:  `json:"message_type"`,
 		},
 	})
 	v := reflect.New(t).Elem()
-	v.Field(1).Set(reflect.ValueOf(messageTypeNames[m.Type()]))
+	v.Field(1).Set(reflect.ValueOf(messageType.String()))
 	structTypesCache[messageType] = v
 	return v
 }

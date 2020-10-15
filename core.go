@@ -6,11 +6,10 @@ import (
 	"fmt"
 	"golang.org/x/sys/windows"
 	"io"
-	"math/rand"
 	"unsafe"
 )
 
-type DuelHandle uintptr
+type duelHandle uintptr
 
 type OcgCore struct {
 	dll *windows.DLL
@@ -153,20 +152,58 @@ func stringFromCString(cbytes []byte) string {
 	return string(cbytesCopy)
 }
 
+type CardReader func(code uint32) RawCardData
+type ScriptReader func(path string) []byte
+
 type CreateDuelOptions struct {
-	Seed         uint32
-	Flags        CoreDuelMode
-	CardReader   func(code uint32) RawCardData
-	ScriptReader func(path string) []byte
+	Seed uint32
+	Mode DuelMode
+
+	CardReader   CardReader
+	ScriptReader ScriptReader
 }
 
-func (c *OcgCore) CreateDuel(options CreateDuelOptions) DuelHandle {
+type DuelMode int
+
+const (
+	DuelModeSpeed DuelMode = iota
+	DuelModeRush
+	DuelModeMR1
+	DuelModeGoat
+	DuelModeMR2
+	DuelModeMR3
+	DuelModeMR4
+	DuelModeMR5
+)
+
+func (c *OcgCore) CreateDuel(options CreateDuelOptions) *OcgDuel {
 	loadedCards := map[uint32]RawCardData{}
 
-	duelHandle := uintptr(0)
+	var flags coreDuelMode
+
+	switch options.Mode {
+	case DuelModeSpeed:
+		flags |= coreDuelModeSpeed
+	case DuelModeRush:
+		flags |= coreDuelModeRush
+	case DuelModeMR1:
+		flags |= coreDuelModeMR1
+	case DuelModeGoat:
+		flags |= coreDuelModeGoat
+	case DuelModeMR2:
+		flags |= coreDuelModeMR2
+	case DuelModeMR3:
+		flags |= coreDuelModeMR3
+	case DuelModeMR4:
+		flags |= coreDuelModeMR4
+	case DuelModeMR5:
+		flags |= coreDuelModeMR5
+	}
+
+	var handle duelHandle
 	duelOptions := typeDuelOptions{
 		seed:  0,
-		flags: uint32(options.Flags),
+		flags: flags,
 		team1: typePlayer{
 			startingLP:        8000,
 			startingDrawCount: 5,
@@ -191,8 +228,8 @@ func (c *OcgCore) CreateDuel(options CreateDuelOptions) DuelHandle {
 			}
 			cardData.code = loadedCard.Code
 			cardData.alias = loadedCard.Alias
-			cardData.setcodes = uintptr(unsafe.Pointer(&loadedCard.SetCodes[0]))
-			cardData.cardtype = loadedCard.CardType
+			cardData.setCodes = uintptr(unsafe.Pointer(&loadedCard.SetCodes[0]))
+			cardData.cardType = loadedCard.CardType
 			cardData.level = loadedCard.Level
 			cardData.attribute = loadedCard.Attribute
 			cardData.race = loadedCard.Race
@@ -200,17 +237,17 @@ func (c *OcgCore) CreateDuel(options CreateDuelOptions) DuelHandle {
 			cardData.defense = loadedCard.Defense
 			cardData.lscale = loadedCard.LScale
 			cardData.rscale = loadedCard.RScale
-			cardData.link_marker = loadedCard.LinkMarker
+			cardData.linkMarker = loadedCard.LinkMarker
 
 			return 0
 		}),
-		scriptReader: windows.NewCallback(func(payload uintptr, duel DuelHandle, namePtr uintptr) uintptr {
+		scriptReader: windows.NewCallback(func(payload uintptr, duel duelHandle, namePtr uintptr) uintptr {
 			name := stringFromCStringPtr(namePtr)
 			contents := options.ScriptReader(name)
 			if len(contents) == 0 {
 				return 0
 			}
-			c.LoadScript(duel, name, contents)
+			c.loadScript(duel, name, contents)
 			return 1
 		}),
 		logHandler: windows.NewCallback(func(payload uintptr, messagePtr uintptr, messageType uintptr) uintptr {
@@ -224,14 +261,21 @@ func (c *OcgCore) CreateDuel(options CreateDuelOptions) DuelHandle {
 		}),
 	}
 
-	_, _, err := c.procCreateDuel.Call(uintptr(unsafe.Pointer(&duelHandle)), uintptr(unsafe.Pointer(&duelOptions)))
+	_, _, err := c.procCreateDuel.Call(uintptr(unsafe.Pointer(&handle)), uintptr(unsafe.Pointer(&duelOptions)))
 	if err != nil && err != windows.ERROR_SUCCESS {
 		panic(err)
 	}
-	return DuelHandle(duelHandle)
+
+	c.loadScript(handle, "constant.lua", options.ScriptReader("constant.lua"))
+	c.loadScript(handle, "utility.lua", options.ScriptReader("utility.lua"))
+
+	return &OcgDuel{
+		c: c,
+		h: handle,
+	}
 }
 
-func (c *OcgCore) LoadScript(duel DuelHandle, name string, content []byte) {
+func (c *OcgCore) loadScript(duel duelHandle, name string, content []byte) {
 	contentBytes := make([]byte, len(content))
 	copy(contentBytes, content)
 	contentPtr := uintptr(unsafe.Pointer(&contentBytes[0]))
@@ -246,29 +290,36 @@ func (c *OcgCore) LoadScript(duel DuelHandle, name string, content []byte) {
 	}
 }
 
-func (c *OcgCore) duelNewCard(duel DuelHandle, cardInfo typeNewCardInfo) {
+func (c *OcgCore) destroyDuel(duel duelHandle) {
+	_, _, err := c.procDestroyDuel.Call(uintptr(duel))
+	if err != nil && err != windows.ERROR_SUCCESS {
+		panic(err)
+	}
+}
+
+func (c *OcgCore) duelNewCard(duel duelHandle, cardInfo typeNewCardInfo) {
 	_, _, err := c.procDuelNewCard.Call(uintptr(duel), uintptr(unsafe.Pointer(&cardInfo)))
 	if err != nil && err != windows.ERROR_SUCCESS {
 		panic(err)
 	}
 }
 
-func (c *OcgCore) DuelProcess(duel DuelHandle) ProcessorFlag {
+func (c *OcgCore) duelProcess(duel duelHandle) processorFlag {
 	ret, _, err := c.procDuelProcess.Call(uintptr(duel))
 	if err != nil && err != windows.ERROR_SUCCESS {
 		panic(err)
 	}
-	return ProcessorFlag(ret)
+	return processorFlag(ret)
 }
 
-func (c *OcgCore) StartDuel(duel DuelHandle) {
+func (c *OcgCore) startDuel(duel duelHandle) {
 	_, _, err := c.procStartDuel.Call(uintptr(duel))
 	if err != nil && err != windows.ERROR_SUCCESS {
 		panic(err)
 	}
 }
 
-func (c *OcgCore) DuelGetMessage(duel DuelHandle) [][]byte {
+func (c *OcgCore) duelGetMessage(duel duelHandle) [][]byte {
 	var length uint32
 	dataPtr, _, err := c.procDuelGetMessage.Call(uintptr(duel), uintptr(unsafe.Pointer(&length)))
 	if err != nil && err != windows.ERROR_SUCCESS {
@@ -300,54 +351,87 @@ func (c *OcgCore) DuelGetMessage(duel DuelHandle) [][]byte {
 	}
 	return messages
 }
-func (c *OcgCore) Debug(duel DuelHandle) {
-	fieldCounts := c.parseQueryField(c.duelQueryField(duel))
 
-	var field Field
+func (c *OcgCore) duelSetResponse(duel duelHandle, data []byte) {
+	if len(data) == 0 {
+		return
+	}
 
-	for i := 0; i < 5; i++ {
-		if fieldCounts.player1.monsters[i].present {
-			m := c.getFieldCard(duel, 0, coreLocationMZone, uint32(i))
-			field.Player1.Monsters[i] = &m
-		}
-		if fieldCounts.player1.spells[i].present {
-			s := c.getFieldCard(duel, 0, coreLocationMZone, uint32(i))
-			field.Player1.Spells[i] = &s
-		}
-		if fieldCounts.player2.monsters[i].present {
-			m := c.getFieldCard(duel, 0, coreLocationMZone, uint32(i))
-			field.Player2.Monsters[i] = &m
-		}
-		if fieldCounts.player2.spells[i].present {
-			s := c.getFieldCard(duel, 0, coreLocationMZone, uint32(i))
-			field.Player2.Spells[i] = &s
-		}
-	}
-	for i := 0; i < 2; i++ {
-		if fieldCounts.player1.monsters[5+i].present {
-			m := c.getFieldCard(duel, 0, coreLocationMZone, uint32(i))
-			field.Player1.ExtraMonsters[i] = &m
-		}
-		if fieldCounts.player2.monsters[5+i].present {
-			m := c.getFieldCard(duel, 0, coreLocationMZone, uint32(i))
-			field.Player2.ExtraMonsters[i] = &m
-		}
-	}
-	for i := 0; i < int(fieldCounts.player2.handCount); i++ {
-		field.Player1.Hand = append(field.Player1.Hand, c.getFieldDeckCard(duel, 0, coreLocationHand, uint32(i)))
+	_, _, err := c.procDuelSetResponse.Call(uintptr(duel), uintptr(unsafe.Pointer(&data[0])), uintptr(len(data)))
+	if err != nil && err != windows.ERROR_SUCCESS {
+		panic(err)
 	}
 }
 
-func (c *OcgCore) getFieldCard(duel DuelHandle, con uint8, loc coreLocation, seq uint32) (card FieldCard) {
+func (c *OcgCore) FieldStatus(duel duelHandle) (field Field) {
+	c.loadFieldPlayer(duel, &field.Player1, 0)
+	c.loadFieldPlayer(duel, &field.Player2, 1)
+	return
+}
+
+func (c *OcgCore) loadFieldPlayer(duel duelHandle, player *FieldPlayer, con uint8) {
 	flagsField := coreQueryCode |
 		coreQueryLevel | coreQueryPosition |
 		coreQueryAttack | coreQueryDefense | coreQueryEquipCard |
 		coreQueryCounters | coreQueryLScale | coreQueryRScale
+	flagsDeck := coreQueryCode | coreQueryPosition
 
-	data := c.parseQuery(c.duelQuery(duel, flagsField, con, loc, seq))
+	player.Deck = parseFieldDeckCards(c.duelQueryLocation(duel, typeQueryInfo{flags: flagsDeck, con: con, loc: coreLocationDeck}))
+	player.ExtraDeck = parseFieldDeckCards(c.duelQueryLocation(duel, typeQueryInfo{flags: flagsDeck, con: con, loc: coreLocationDeck}))
+	player.Grave = parseFieldDeckCards(c.duelQueryLocation(duel, typeQueryInfo{flags: flagsDeck, con: con, loc: coreLocationDeck}))
+	player.Banished = parseFieldDeckCards(c.duelQueryLocation(duel, typeQueryInfo{flags: flagsDeck, con: con, loc: coreLocationDeck}))
+	player.Hand = parseFieldDeckCards(c.duelQueryLocation(duel, typeQueryInfo{flags: flagsDeck, con: con, loc: coreLocationHand}))
 
+	monsters := c.duelQueryLocation(duel, typeQueryInfo{flags: flagsField, con: con, loc: coreLocationMZone})
+	for i := 0; i < 5; i++ {
+		if monsters[i] != nil {
+			m := parseFieldCard(monsters[i])
+			player.Monsters[i] = &m
+		}
+	}
+	for i := 0; i < 2; i++ {
+		if monsters[5+i] != nil {
+			s := parseFieldCard(monsters[5+i])
+			player.PendulumZones[i] = &s
+		}
+	}
+
+	spells := c.duelQueryLocation(duel, typeQueryInfo{flags: flagsField, con: con, loc: coreLocationSZone})
+	for i := 0; i < 5; i++ {
+		if spells[i] != nil {
+			s := parseFieldCard(spells[i])
+			player.Spells[i] = &s
+		}
+	}
+	if spells[5] != nil {
+		s := parseFieldCard(spells[5])
+		player.FieldSpell = &s
+	}
+	for i := 0; i < 2; i++ {
+		if spells[6+i] != nil {
+			s := parseFieldCard(spells[6+i])
+			player.PendulumZones[i] = &s
+		}
+	}
+}
+
+func parseFieldDeckCards(cards []coreQueryResult) []FieldDeckCard {
+	res := make([]FieldDeckCard, len(cards))
+	for i, data := range cards {
+		res[i] = parseFieldDeckCard(data)
+	}
+	return res
+}
+
+func parseFieldDeckCard(data coreQueryResult) (card FieldDeckCard) {
 	card.Code = binary.LittleEndian.Uint32(data[coreQueryCode])
-	card.Position = Position(binary.LittleEndian.Uint32(data[coreQueryPosition]))
+	card.Position = parseCorePosition(corePosition(binary.LittleEndian.Uint32(data[coreQueryPosition]))).Face()
+	return
+}
+
+func parseFieldCard(data coreQueryResult) (card FieldCard) {
+	card.Code = binary.LittleEndian.Uint32(data[coreQueryCode])
+	card.Position = parseCorePosition(corePosition(binary.LittleEndian.Uint32(data[coreQueryPosition])))
 	card.Level = int(binary.LittleEndian.Uint32(data[coreQueryLevel]))
 	card.Defense = int(binary.LittleEndian.Uint32(data[coreQueryDefense]))
 	card.Attack = int(binary.LittleEndian.Uint32(data[coreQueryAttack]))
@@ -356,25 +440,22 @@ func (c *OcgCore) getFieldCard(duel DuelHandle, con uint8, loc coreLocation, seq
 	return
 }
 
-func (c *OcgCore) getFieldDeckCard(duel DuelHandle, con uint8, loc coreLocation, seq uint32) (card FieldDeckCard) {
-	data := c.parseQuery(c.duelQuery(duel, coreQueryCode, con, loc, seq))
-
-	card.Code = binary.LittleEndian.Uint32(data[coreQueryCode])
-	return
-}
-
 type Field struct {
-	Player1 FieldPlayer
-	Player2 FieldPlayer
+	Player1 FieldPlayer `json:"player1"`
+	Player2 FieldPlayer `json:"player2"`
 }
 
 type FieldPlayer struct {
-	Deck          []FieldDeckCard
-	Hand          []FieldDeckCard
-	Grave         []FieldCard
-	Monsters      [5]*FieldCard
-	Spells        [5]*FieldCard
-	ExtraMonsters [2]*FieldCard
+	Deck          []FieldDeckCard `json:"deck"`
+	ExtraDeck     []FieldDeckCard `json:"extra_deck"`
+	Hand          []FieldDeckCard `json:"hand"`
+	Grave         []FieldDeckCard `json:"grave"`
+	Banished      []FieldDeckCard `json:"banished"`
+	Monsters      [5]*FieldCard   `json:"monsters"`
+	Spells        [5]*FieldCard   `json:"spells"`
+	FieldSpell    *FieldCard      `json:"field_spell"`
+	PendulumZones [2]*FieldCard   `json:"pendulum_zones"`
+	ExtraMonsters [2]*FieldCard   `json:"extra_monsters"`
 }
 
 type FieldCard struct {
@@ -388,38 +469,11 @@ type FieldCard struct {
 }
 
 type FieldDeckCard struct {
-	Code uint32 `json:"code"`
+	Code     uint32       `json:"code"`
+	Position FacePosition `json:"position"`
 }
 
-func (c *OcgCore) FieldData(duel DuelHandle) {
-
-}
-
-func (c *OcgCore) parseQuery(data []byte) map[coreQuery][]byte {
-	b := bytes.NewBuffer(data)
-
-	res := map[coreQuery][]byte{}
-	for {
-		var length uint16
-		err := binary.Read(b, binary.LittleEndian, &length)
-		if err == io.EOF {
-			break
-		} else if err != nil {
-			panic(err)
-		}
-		query := readInt32(b)
-		queryData := make([]byte, length-4)
-		querySize, err := b.Read(queryData)
-
-		if err != nil || querySize != int(length-4) {
-			panic(err)
-		}
-		res[coreQuery(query)] = queryData
-	}
-	return res
-}
-
-func (c *OcgCore) duelQueryOverlay(duel DuelHandle, flags coreQuery, con uint8, loc coreLocation, seq uint32, overlaySeq uint32) []byte {
+func (c *OcgCore) duelQueryOverlay(duel duelHandle, flags coreQuery, con uint8, loc coreLocation, seq uint32, overlaySeq uint32) coreQueryResult {
 	return c.duelQueryInfo(duel, typeQueryInfo{
 		flags:      flags,
 		con:        con,
@@ -429,7 +483,7 @@ func (c *OcgCore) duelQueryOverlay(duel DuelHandle, flags coreQuery, con uint8, 
 	})
 }
 
-func (c *OcgCore) duelQuery(duel DuelHandle, flags coreQuery, con uint8, loc coreLocation, seq uint32) []byte {
+func (c *OcgCore) duelQuery(duel duelHandle, flags coreQuery, con uint8, loc coreLocation, seq uint32) coreQueryResult {
 	return c.duelQueryInfo(duel, typeQueryInfo{
 		flags: flags,
 		con:   con,
@@ -438,133 +492,31 @@ func (c *OcgCore) duelQuery(duel DuelHandle, flags coreQuery, con uint8, loc cor
 	})
 }
 
-func (c *OcgCore) duelQueryInfo(duel DuelHandle, info typeQueryInfo) []byte {
+func (c *OcgCore) duelQueryInfo(duel duelHandle, info typeQueryInfo) coreQueryResult {
 	var length uint32
 	dataPtr, _, err := c.procDuelQuery.Call(uintptr(duel), uintptr(unsafe.Pointer(&length)), uintptr(unsafe.Pointer(&info)))
 	if err != nil && err != windows.ERROR_SUCCESS {
 		panic(err)
 	}
-	return bytesFromPtr(dataPtr, uintptr(length))
+	return parseQuery(bytesFromPtr(dataPtr, uintptr(length)))
 }
 
-func (c *OcgCore) duelQueryField(duel DuelHandle) []byte {
+func (c *OcgCore) duelQueryLocation(duel duelHandle, info typeQueryInfo) []coreQueryResult {
+	var length uint32
+	dataPtr, _, err := c.procDuelQueryLocation.Call(uintptr(duel), uintptr(unsafe.Pointer(&length)), uintptr(unsafe.Pointer(&info)))
+	if err != nil && err != windows.ERROR_SUCCESS {
+		panic(err)
+	}
+	return parseQueryLocation(bytesFromPtr(dataPtr, uintptr(length)))
+}
+
+func (c *OcgCore) duelQueryField(duel duelHandle) coreQueryField {
 	var length uint32
 	dataPtr, _, err := c.procDuelQueryField.Call(uintptr(duel), uintptr(unsafe.Pointer(&length)))
 	if err != nil && err != windows.ERROR_SUCCESS {
 		panic(err)
 	}
-	return bytesFromPtr(dataPtr, uintptr(length))
-}
-
-func (c *OcgCore) parseQueryField(data []byte) coreQueryField {
-	b := bytes.NewBuffer(data)
-
-	var field coreQueryField
-	field.duelOptions = readInt32(b)
-	parsePlayer(b, &field.player1)
-	parsePlayer(b, &field.player2)
-	chainSize := readInt32(b)
-	for i := 0; i < int(chainSize); i++ {
-		field.chain = append(field.chain, coreQueryFieldChain{
-			code:                 readInt32(b),
-			controller:           readUint8(b),
-			location:             readUint8(b),
-			sequence:             readUint32(b),
-			position:             readUint32(b),
-			triggeringController: readUint8(b),
-			triggeringLocation:   readUint8(b),
-			triggeringSequence:   readUint32(b),
-			description:          readUint64(b),
-		})
-	}
-	return field
-}
-
-func (c *OcgCore) SetupDeck(duel DuelHandle, player int, mainDeck []uint32, extraDeck []uint32, shuffle bool) {
-	if shuffle {
-		rand.Shuffle(len(mainDeck), func(i, j int) {
-			mainDeck[i], mainDeck[j] = mainDeck[j], mainDeck[i]
-		})
-	}
-
-	var cardInfo typeNewCardInfo
-	cardInfo.duelist = 0
-	cardInfo.team = uint8(player)
-	cardInfo.con = uint8(player)
-
-	cardInfo.pos = uint32(corePositionFaceDownDefense)
-
-	cardInfo.loc = uint32(coreLocationDeck)
-	for _, card := range mainDeck {
-		cardInfo.code = card
-		c.duelNewCard(duel, cardInfo)
-	}
-	cardInfo.loc = uint32(coreLocationExtra)
-	for _, card := range extraDeck {
-		cardInfo.code = card
-		c.duelNewCard(duel, cardInfo)
-	}
-}
-
-func parsePlayer(b *bytes.Buffer, player *coreQueryFieldPlayer) {
-	player.lp = readInt32(b)
-	for i := 0; i < 7; i++ {
-		player.monsters[i].present = readUint8(b) != 0
-		if player.monsters[i].present {
-			player.monsters[i].position = readInt8(b)
-			player.monsters[i].materials = readInt32(b)
-		}
-	}
-	for i := 0; i < 8; i++ {
-		player.spells[i].present = readUint8(b) != 0
-		if player.spells[i].present {
-			player.spells[i].position = readInt8(b)
-			player.spells[i].materials = readInt32(b)
-		}
-	}
-	player.mainCount = readUint32(b)
-	player.handCount = readUint32(b)
-	player.graveCount = readUint32(b)
-	player.banishCount = readUint32(b)
-	player.extraCount = readUint32(b)
-	player.extraPCount = readUint32(b)
-}
-
-type coreQueryField struct {
-	duelOptions int32
-	player1     coreQueryFieldPlayer
-	player2     coreQueryFieldPlayer
-	chain       []coreQueryFieldChain
-}
-
-type coreQueryFieldChain struct {
-	code                 int32
-	controller           uint8
-	location             uint8
-	sequence             uint32
-	position             uint32
-	triggeringController uint8
-	triggeringLocation   uint8
-	triggeringSequence   uint32
-	description          uint64
-}
-
-type coreQueryFieldPlayer struct {
-	lp          int32
-	monsters    [7]coreQueryFieldCard
-	spells      [8]coreQueryFieldCard
-	mainCount   uint32
-	handCount   uint32
-	graveCount  uint32
-	banishCount uint32
-	extraCount  uint32
-	extraPCount uint32
-}
-
-type coreQueryFieldCard struct {
-	present   bool
-	position  int8
-	materials int32
+	return parseQueryField(bytesFromPtr(dataPtr, uintptr(length)))
 }
 
 type typeQueryInfo struct {
@@ -593,7 +545,7 @@ type typePlayer struct {
 
 type typeDuelOptions struct {
 	seed           uint32
-	flags          uint32
+	flags          coreDuelMode
 	team1          typePlayer
 	team2          typePlayer
 	cardReader     uintptr // void fn(void* payload, uint32_t code, OCG_CardData* data);
@@ -607,18 +559,18 @@ type typeDuelOptions struct {
 }
 
 type typeCardData struct {
-	code        uint32
-	alias       uint32
-	setcodes    uintptr // uint16_t*
-	cardtype    uint32
-	level       uint32
-	attribute   uint32
-	race        uint32
-	attack      int32
-	defense     int32
-	lscale      uint32
-	rscale      uint32
-	link_marker uint32
+	code       uint32
+	alias      uint32
+	setCodes   uintptr // uint16_t*
+	cardType   uint32
+	level      uint32
+	attribute  uint32
+	race       uint32
+	attack     int32
+	defense    int32
+	lscale     uint32
+	rscale     uint32
+	linkMarker uint32
 }
 
 type RawCardData struct {

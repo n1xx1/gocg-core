@@ -14,8 +14,8 @@ const (
 	coreLocationFZone
 	coreLocationPZone
 
-	CoreLocationOnField coreLocation = 0x0c
-	CoreLocationAll     coreLocation = 0x3ff
+	coreLocationOnField coreLocation = 0x0c
+	coreLocationAll     coreLocation = 0x3ff
 )
 
 type corePosition uint32
@@ -28,10 +28,10 @@ const (
 )
 
 const (
-	corePositionFaceUp   corePosition = 0x5
-	corePositionFaceDown corePosition = 0xa
-	corePositionAttack   corePosition = 0x3
-	corePositionDefense  corePosition = 0xc
+	corePositionFaceUp   corePosition = 0b0101
+	corePositionFaceDown corePosition = 0b1010
+	corePositionAttack   corePosition = 0b0011
+	corePositionDefense  corePosition = 0b1100
 )
 
 type Attribute uint32
@@ -76,175 +76,176 @@ const (
 	RaceCyberse      Race = 0x1000000
 )
 
-type CoreDuelMode uint32
+type coreDuelMode uint32
 
 const (
-	CoreDuelTestMode                    CoreDuelMode = 0x01
-	CoreDuelAttackFirstTurn             CoreDuelMode = 0x02
-	CoreDuelUseTrapsInNewChain          CoreDuelMode = 0x04
-	CoreDuel6StepBattleStep             CoreDuelMode = 0x08
-	CoreDuelPseudoShuffle               CoreDuelMode = 0x10
-	CoreDuelTriggerWhenPrivateKnowledge CoreDuelMode = 0x20
-	CoreDuelSimpleAI                    CoreDuelMode = 0x40
-	CoreDuelRelay                       CoreDuelMode = 0x80
-	CoreDuelObsoleteIgnition            CoreDuelMode = 0x100
-	CoreDuel1stTurnDraw                 CoreDuelMode = 0x200
-	CoreDuel1FaceUpField                CoreDuelMode = 0x400
-	CoreDuelPZone                       CoreDuelMode = 0x800
-	CoreDuelSeparatePZone               CoreDuelMode = 0x1000
-	CoreDuelEMZone                      CoreDuelMode = 0x2000
-	CoreDuelFSXMMZone                   CoreDuelMode = 0x4000
-	CoreDuelTrapMonstersNotUseZone      CoreDuelMode = 0x8000
-	CoreDuelReturnToExtraDeckTriggers   CoreDuelMode = 0x10000
-	CoreDuelTriggerOnlyInLocation       CoreDuelMode = 0x20000
-	CoreDuelSPSummonOnceOldNegate       CoreDuelMode = 0x40000
-	CoreDuelCannotSummonOathOld         CoreDuelMode = 0x80000
-	CoreDuelNoStandbyPhase              CoreDuelMode = 0x100000
-	CoreDuelNoMainPhase2                CoreDuelMode = 0x200000
-	CoreDuel3ColumnsField               CoreDuelMode = 0x400000
-	CoreDuelDrawUntil5                  CoreDuelMode = 0x800000
-	CoreDuelNoHandLimit                 CoreDuelMode = 0x1000000
-	CoreDuelUnlimitedSummons            CoreDuelMode = 0x2000000
-	CoreDuelInvertedQuickPriority       CoreDuelMode = 0x4000000
-	CoreDuelEquipNotSentIfMissingTarget CoreDuelMode = 0x8000000
-	CoreDuel0AtkDestroyed               CoreDuelMode = 0x10000000
-	CoreDuelStoreAttackReplays          CoreDuelMode = 0x20000000
-	CoreDuelSingleChainInDamageSubStep  CoreDuelMode = 0x40000000
-	CoreDuelReposAfterControlSwitch     CoreDuelMode = 0x80000000
-)
-const (
-	CoreDuelModeSpeed CoreDuelMode = CoreDuel3ColumnsField | CoreDuelNoMainPhase2 | CoreDuelTriggerOnlyInLocation
-	CoreDuelModeRush  CoreDuelMode = CoreDuel3ColumnsField | CoreDuelNoMainPhase2 | CoreDuelNoStandbyPhase | CoreDuel1stTurnDraw | CoreDuelInvertedQuickPriority | CoreDuelDrawUntil5 | CoreDuelNoHandLimit | CoreDuelUnlimitedSummons | CoreDuelTriggerOnlyInLocation
-	CoreDuelModeMR1   CoreDuelMode = CoreDuelObsoleteIgnition | CoreDuel1stTurnDraw | CoreDuel1FaceUpField | CoreDuelSPSummonOnceOldNegate | CoreDuelReturnToExtraDeckTriggers | CoreDuelCannotSummonOathOld
-	CoreDuelModeGoat  CoreDuelMode = CoreDuelModeMR1 | CoreDuelUseTrapsInNewChain | CoreDuel6StepBattleStep | CoreDuelTriggerWhenPrivateKnowledge | CoreDuelEquipNotSentIfMissingTarget | CoreDuel0AtkDestroyed | CoreDuelStoreAttackReplays | CoreDuelSingleChainInDamageSubStep | CoreDuelReposAfterControlSwitch
-	CoreDuelModeMR2   CoreDuelMode = CoreDuel1stTurnDraw | CoreDuel1FaceUpField | CoreDuelSPSummonOnceOldNegate | CoreDuelReturnToExtraDeckTriggers | CoreDuelCannotSummonOathOld
-	CoreDuelModeMR3   CoreDuelMode = CoreDuelPZone | CoreDuelSeparatePZone | CoreDuelSPSummonOnceOldNegate | CoreDuelReturnToExtraDeckTriggers | CoreDuelCannotSummonOathOld
-	CoreDuelModeMR4   CoreDuelMode = CoreDuelPZone | CoreDuelEMZone | CoreDuelSPSummonOnceOldNegate | CoreDuelReturnToExtraDeckTriggers | CoreDuelCannotSummonOathOld
-	CoreDuelModeMR5   CoreDuelMode = CoreDuelPZone | CoreDuelEMZone | CoreDuelFSXMMZone | CoreDuelTrapMonstersNotUseZone | CoreDuelTriggerOnlyInLocation
+	coreDuelTestMode coreDuelMode = 1 << iota
+	coreDuelAttackFirstTurn
+	coreDuelUseTrapsInNewChain
+	coreDuel6StepBattleStep
+	coreDuelPseudoShuffle
+	coreDuelTriggerWhenPrivateKnowledge
+	coreDuelSimpleAI
+	coreDuelRelay
+	coreDuelObsoleteIgnition
+	coreDuel1stTurnDraw
+	coreDuel1FaceUpField
+	coreDuelPZone
+	coreDuelSeparatePZone
+	coreDuelEMZone
+	coreDuelFSXMMZone
+	coreDuelTrapMonstersNotUseZone
+	coreDuelReturnToExtraDeckTriggers
+	coreDuelTriggerOnlyInLocation
+	coreDuelSPSummonOnceOldNegate
+	coreDuelCannotSummonOathOld
+	coreDuelNoStandbyPhase
+	coreDuelNoMainPhase2
+	coreDuel3ColumnsField
+	coreDuelDrawUntil5
+	coreDuelNoHandLimit
+	coreDuelUnlimitedSummons
+	coreDuelInvertedQuickPriority
+	coreDuelEquipNotSentIfMissingTarget
+	coreDuel0AtkDestroyed
+	coreDuelStoreAttackReplays
+	coreDuelSingleChainInDamageSubStep
+	coreDuelReposAfterControlSwitch
 )
 
-type ProcessorFlag int
-
 const (
-	ProcessorFlagEnd      ProcessorFlag = 0
-	ProcessorFlagWaiting  ProcessorFlag = 0x1
-	ProcessorFlagContinue ProcessorFlag = 0x2
+	coreDuelModeSpeed coreDuelMode = coreDuel3ColumnsField | coreDuelNoMainPhase2 | coreDuelTriggerOnlyInLocation
+	coreDuelModeRush  coreDuelMode = coreDuel3ColumnsField | coreDuelNoMainPhase2 | coreDuelNoStandbyPhase | coreDuel1stTurnDraw | coreDuelInvertedQuickPriority | coreDuelDrawUntil5 | coreDuelNoHandLimit | coreDuelUnlimitedSummons | coreDuelTriggerOnlyInLocation
+	coreDuelModeMR1   coreDuelMode = coreDuelObsoleteIgnition | coreDuel1stTurnDraw | coreDuel1FaceUpField | coreDuelSPSummonOnceOldNegate | coreDuelReturnToExtraDeckTriggers | coreDuelCannotSummonOathOld
+	coreDuelModeGoat  coreDuelMode = coreDuelModeMR1 | coreDuelUseTrapsInNewChain | coreDuel6StepBattleStep | coreDuelTriggerWhenPrivateKnowledge | coreDuelEquipNotSentIfMissingTarget | coreDuel0AtkDestroyed | coreDuelStoreAttackReplays | coreDuelSingleChainInDamageSubStep | coreDuelReposAfterControlSwitch
+	coreDuelModeMR2   coreDuelMode = coreDuel1stTurnDraw | coreDuel1FaceUpField | coreDuelSPSummonOnceOldNegate | coreDuelReturnToExtraDeckTriggers | coreDuelCannotSummonOathOld
+	coreDuelModeMR3   coreDuelMode = coreDuelPZone | coreDuelSeparatePZone | coreDuelSPSummonOnceOldNegate | coreDuelReturnToExtraDeckTriggers | coreDuelCannotSummonOathOld
+	coreDuelModeMR4   coreDuelMode = coreDuelPZone | coreDuelEMZone | coreDuelSPSummonOnceOldNegate | coreDuelReturnToExtraDeckTriggers | coreDuelCannotSummonOathOld
+	coreDuelModeMR5   coreDuelMode = coreDuelPZone | coreDuelEMZone | coreDuelFSXMMZone | coreDuelTrapMonstersNotUseZone | coreDuelTriggerOnlyInLocation
 )
 
-type Processor int
+type processorFlag int
 
 const (
-	ProcessorAdjust             Processor = 1
-	ProcessorHint               Processor = 2
-	ProcessorTurn               Processor = 3
-	ProcessorRefreshLoc         Processor = 5
-	ProcessorStartUp            Processor = 6
-	ProcessorSelectIdleCMD      Processor = 10
-	ProcessorSelectEffectYN     Processor = 11
-	ProcessorSelectBattleCMD    Processor = 12
-	ProcessorSelectYesNo        Processor = 13
-	ProcessorSelectOption       Processor = 14
-	ProcessorSelectCard         Processor = 15
-	ProcessorSelectChain        Processor = 16
-	ProcessorSelectUnselectCard Processor = 17
-	ProcessorSelectPlace        Processor = 18
-	ProcessorSelectPosition     Processor = 19
-	ProcessorSelectTributeP     Processor = 20
-	ProcessorSortChain          Processor = 21
-	ProcessorSelectCounter      Processor = 22
-	ProcessorSelectSum          Processor = 23
-	ProcessorSelectDisfield     Processor = 24
-	ProcessorSortCard           Processor = 25
-	ProcessorSelectRelease      Processor = 26
-	ProcessorSelectTribute      Processor = 27
-	ProcessorPointEvent         Processor = 30
-	ProcessorQuickEffect        Processor = 31
-	ProcessorIdleCommand        Processor = 32
-	ProcessorPhaseEvent         Processor = 33
-	ProcessorBattleCommand      Processor = 34
-	ProcessorDamageStep         Processor = 35
-	ProcessorForcedBattle       Processor = 36
-	ProcessorAddChain           Processor = 40
-	ProcessorSolveChain         Processor = 42
-	ProcessorSolveContinuous    Processor = 43
-	ProcessorExecuteCost        Processor = 44
-	ProcessorExecuteOperation   Processor = 45
-	ProcessorExecuteTarget      Processor = 46
-	ProcessorDestroy            Processor = 50
-	ProcessorRelease            Processor = 51
-	ProcessorSendTo             Processor = 52
-	ProcessorMoveToField        Processor = 53
-	ProcessorChangePos          Processor = 54
-	ProcessorOperationReplace   Processor = 55
-	ProcessorDestroyReplace     Processor = 56
-	ProcessorReleaseReplace     Processor = 57
-	ProcessorSendToReplace      Processor = 58
-	ProcessorSummonRule         Processor = 60
-	ProcessorSPSummonRule       Processor = 61
-	ProcessorSPSummon           Processor = 62
-	ProcessorFlipSummon         Processor = 63
-	ProcessorMSet               Processor = 64
-	ProcessorSSet               Processor = 65
-	ProcessorSPSummonStep       Processor = 66
-	ProcessorSSetG              Processor = 67
-	ProcessorDraw               Processor = 70
-	ProcessorDamage             Processor = 71
-	ProcessorRecover            Processor = 72
-	ProcessorEquip              Processor = 73
-	ProcessorGetControl         Processor = 74
-	ProcessorSwapControl        Processor = 75
-	ProcessorControlAdjust      Processor = 76
-	ProcessorSelfDestroy        Processor = 77
-	ProcessorTrapMonsterAdjust  Processor = 78
-	ProcessorPayLPCost          Processor = 80
-	ProcessorRemoveCounter      Processor = 81
-	ProcessorAttackDisable      Processor = 82
-	ProcessorActivateEffect     Processor = 83
-	ProcessorAnnounceRace       Processor = 110
-	ProcessorAnnounceAttrib     Processor = 111
-	ProcessorAnnounceLevel      Processor = 112
-	ProcessorAnnounceCard       Processor = 113
-	ProcessorAnnounceType       Processor = 114
-	ProcessorAnnounceNumber     Processor = 115
-	ProcessorAnnounceCoin       Processor = 116
-	ProcessorTossDice           Processor = 117
-	ProcessorTossCoin           Processor = 118
-	ProcessorRockPaperScissors  Processor = 119
-	ProcessorSelectFusion       Processor = 131
-	ProcessorDiscardHand        Processor = 150
-	ProcessorDiscardDeck        Processor = 151
-	ProcessorSortDeck           Processor = 152
-	ProcessorRemoveOverlay      Processor = 160
+	processorFlagEnd      processorFlag = 0
+	processorFlagWaiting  processorFlag = 0x1
+	processorFlagContinue processorFlag = 0x2
 )
 
-type Type uint32
+type processor int
 
 const (
-	TypeMonster     Type = 0x1
-	TypeSpell       Type = 0x2
-	TypeTrap        Type = 0x4
-	TypeNormal      Type = 0x10
-	TypeEffect      Type = 0x20
-	TypeFusion      Type = 0x40
-	TypeRitual      Type = 0x80
-	TypeTrapMonster Type = 0x100
-	TypeSpirit      Type = 0x200
-	TypeUnion       Type = 0x400
-	TypeGemini      Type = 0x800
-	TypeTuner       Type = 0x1000
-	TypeSynchro     Type = 0x2000
-	TypeToken       Type = 0x4000
-	TypeQuickPlay   Type = 0x10000
-	TypeContinuous  Type = 0x20000
-	TypeEquip       Type = 0x40000
-	TypeField       Type = 0x80000
-	TypeCounter     Type = 0x100000
-	TypeFlip        Type = 0x200000
-	TypeToon        Type = 0x400000
-	TypeXyz         Type = 0x800000
-	TypePendulum    Type = 0x1000000
-	TypeSPSummon    Type = 0x2000000
-	TypeLink        Type = 0x4000000
+	processorAdjust             processor = 1
+	processorHint               processor = 2
+	processorTurn               processor = 3
+	processorRefreshLoc         processor = 5
+	processorStartUp            processor = 6
+	processorSelectIdleCMD      processor = 10
+	processorSelectEffectYN     processor = 11
+	processorSelectBattleCMD    processor = 12
+	processorSelectYesNo        processor = 13
+	processorSelectOption       processor = 14
+	processorSelectCard         processor = 15
+	processorSelectChain        processor = 16
+	processorSelectUnselectCard processor = 17
+	processorSelectPlace        processor = 18
+	processorSelectPosition     processor = 19
+	processorSelectTributeP     processor = 20
+	processorSortChain          processor = 21
+	processorSelectCounter      processor = 22
+	processorSelectSum          processor = 23
+	processorSelectDisfield     processor = 24
+	processorSortCard           processor = 25
+	processorSelectRelease      processor = 26
+	processorSelectTribute      processor = 27
+	processorPointEvent         processor = 30
+	processorQuickEffect        processor = 31
+	processorIdleCommand        processor = 32
+	processorPhaseEvent         processor = 33
+	processorBattleCommand      processor = 34
+	processorDamageStep         processor = 35
+	processorForcedBattle       processor = 36
+	processorAddChain           processor = 40
+	processorSolveChain         processor = 42
+	processorSolveContinuous    processor = 43
+	processorExecuteCost        processor = 44
+	processorExecuteOperation   processor = 45
+	processorExecuteTarget      processor = 46
+	processorDestroy            processor = 50
+	processorRelease            processor = 51
+	processorSendTo             processor = 52
+	processorMoveToField        processor = 53
+	processorChangePos          processor = 54
+	processorOperationReplace   processor = 55
+	processorDestroyReplace     processor = 56
+	processorReleaseReplace     processor = 57
+	processorSendToReplace      processor = 58
+	processorSummonRule         processor = 60
+	processorSPSummonRule       processor = 61
+	processorSPSummon           processor = 62
+	processorFlipSummon         processor = 63
+	processorMSet               processor = 64
+	processorSSet               processor = 65
+	processorSPSummonStep       processor = 66
+	processorSSetG              processor = 67
+	processorDraw               processor = 70
+	processorDamage             processor = 71
+	processorRecover            processor = 72
+	processorEquip              processor = 73
+	processorGetControl         processor = 74
+	processorSwapControl        processor = 75
+	processorControlAdjust      processor = 76
+	processorSelfDestroy        processor = 77
+	processorTrapMonsterAdjust  processor = 78
+	processorPayLPCost          processor = 80
+	processorRemoveCounter      processor = 81
+	processorAttackDisable      processor = 82
+	processorActivateEffect     processor = 83
+	processorAnnounceRace       processor = 110
+	processorAnnounceAttrib     processor = 111
+	processorAnnounceLevel      processor = 112
+	processorAnnounceCard       processor = 113
+	processorAnnounceType       processor = 114
+	processorAnnounceNumber     processor = 115
+	processorAnnounceCoin       processor = 116
+	processorTossDice           processor = 117
+	processorTossCoin           processor = 118
+	processorRockPaperScissors  processor = 119
+	processorSelectFusion       processor = 131
+	processorDiscardHand        processor = 150
+	processorDiscardDeck        processor = 151
+	processorSortDeck           processor = 152
+	processorRemoveOverlay      processor = 160
+)
+
+type cardType uint32
+
+const (
+	cardTypeMonster     cardType = 0x1
+	cardTypeSpell       cardType = 0x2
+	cardTypeTrap        cardType = 0x4
+	cardTypeNormal      cardType = 0x10
+	cardTypeEffect      cardType = 0x20
+	cardTypeFusion      cardType = 0x40
+	cardTypeRitual      cardType = 0x80
+	cardTypeTrapMonster cardType = 0x100
+	cardTypeSpirit      cardType = 0x200
+	cardTypeUnion       cardType = 0x400
+	cardTypeGemini      cardType = 0x800
+	cardTypeTuner       cardType = 0x1000
+	cardTypeSynchro     cardType = 0x2000
+	cardTypeToken       cardType = 0x4000
+	cardTypeQuickPlay   cardType = 0x10000
+	cardTypeContinuous  cardType = 0x20000
+	cardTypeEquip       cardType = 0x40000
+	cardTypeField       cardType = 0x80000
+	cardTypeCounter     cardType = 0x100000
+	cardTypeFlip        cardType = 0x200000
+	cardTypeToon        cardType = 0x400000
+	cardTypeXyz         cardType = 0x800000
+	cardTypePendulum    cardType = 0x1000000
+	cardTypeSPSummon    cardType = 0x2000000
+	cardTypeLink        cardType = 0x4000000
 )
 
 type coreMessage uint8
@@ -391,4 +392,6 @@ const (
 	coreQueryLink
 	coreQueryIsHidden
 	coreQueryCover
+
+	coreQueryEnd coreQuery = 0x80000000
 )
