@@ -2,217 +2,216 @@ package ocgcore
 
 import (
 	"bytes"
-	"encoding/json"
-	"errors"
 	"fmt"
-	"reflect"
-	"sync"
+	"ocgcore/lib"
+	"ocgcore/utils"
 )
 
 //go:generate go run ocgcore/cmd/enumer -type=MessageType -json -transform=snake -output message_enumer.go -trimprefix MessageType
+//go:generate go run ocgcore/cmd/interfacer -method=messageType -returns=MessageType -field=message_type -interface Message -output message_interfacer.go
 
 type cardLocation struct {
 	controller int
-	location   coreLocation
+	location   lib.Location
 	sequence   int
-	position   corePosition
+	position   lib.Position
 }
 
 func readMessage(contents []byte) Message {
 	b := bytes.NewBuffer(contents)
 
-	id := readUint8(b)
+	id := utils.ReadUint8(b)
 
-	switch coreMessage(id) {
-	case coreMessageRetry:
+	switch lib.Message(id) {
+	case lib.MessageRetry:
 		return ReadMessageRetry(b)
-	case coreMessageHint:
+	case lib.MessageHint:
 		return ReadMessageHint(b)
-	case coreMessageWaiting:
+	case lib.MessageWaiting:
 		return ReadMessageWaiting(b)
-	case coreMessageStart:
+	case lib.MessageStart:
 		return ReadMessageStart(b)
-	case coreMessageWin:
+	case lib.MessageWin:
 		return ReadMessageWin(b)
-	case coreMessageUpdateData:
+	case lib.MessageUpdateData:
 		return ReadMessageUpdateData(b)
-	case coreMessageUpdateCard:
+	case lib.MessageUpdateCard:
 		return ReadMessageUpdateCard(b)
-	case coreMessageRequestDeck:
+	case lib.MessageRequestDeck:
 		return ReadMessageRequestDeck(b)
-	case coreMessageSelectBattleCMD:
+	case lib.MessageSelectBattleCMD:
 		return ReadMessageSelectBattleCMD(b)
-	case coreMessageSelectIdleCMD:
+	case lib.MessageSelectIdleCMD:
 		return ReadMessageSelectIdleCMD(b)
-	case coreMessageSelectEffectYN:
+	case lib.MessageSelectEffectYN:
 		return ReadMessageSelectEffectYN(b)
-	case coreMessageSelectYesNo:
+	case lib.MessageSelectYesNo:
 		return ReadMessageSelectYesNo(b)
-	case coreMessageSelectOption:
+	case lib.MessageSelectOption:
 		return ReadMessageSelectOption(b)
-	case coreMessageSelectCard:
+	case lib.MessageSelectCard:
 		return ReadMessageSelectCard(b)
-	case coreMessageSelectChain:
+	case lib.MessageSelectChain:
 		return ReadMessageSelectChain(b)
-	case coreMessageSelectPlace:
+	case lib.MessageSelectPlace:
 		return ReadMessageSelectPlace(b)
-	case coreMessageSelectPosition:
+	case lib.MessageSelectPosition:
 		return ReadMessageSelectPosition(b)
-	case coreMessageSelectTribute:
+	case lib.MessageSelectTribute:
 		return ReadMessageSelectTribute(b)
-	case coreMessageSortChain:
+	case lib.MessageSortChain:
 		return ReadMessageSortChain(b)
-	case coreMessageSelectCounter:
+	case lib.MessageSelectCounter:
 		return ReadMessageSelectCounter(b)
-	case coreMessageSelectSum:
+	case lib.MessageSelectSum:
 		return ReadMessageSelectSum(b)
-	case coreMessageSelectDisfield:
+	case lib.MessageSelectDisfield:
 		return ReadMessageSelectDisfield(b)
-	case coreMessageSortCard:
+	case lib.MessageSortCard:
 		return ReadMessageSortCard(b)
-	case coreMessageSelectUnselectCard:
+	case lib.MessageSelectUnselectCard:
 		return ReadMessageSelectUnselectCard(b)
-	case coreMessageConfirmDeckTop:
+	case lib.MessageConfirmDeckTop:
 		return ReadMessageConfirmDeckTop(b)
-	case coreMessageConfirmCards:
+	case lib.MessageConfirmCards:
 		return ReadMessageConfirmCards(b)
-	case coreMessageShuffleDeck:
+	case lib.MessageShuffleDeck:
 		return ReadMessageShuffleDeck(b)
-	case coreMessageShuffleHand:
+	case lib.MessageShuffleHand:
 		return ReadMessageShuffleHand(b)
-	case coreMessageRefreshDeck:
+	case lib.MessageRefreshDeck:
 		return ReadMessageRefreshDeck(b)
-	case coreMessageSwapGraveDeck:
+	case lib.MessageSwapGraveDeck:
 		return ReadMessageSwapGraveDeck(b)
-	case coreMessageShuffleSetCard:
+	case lib.MessageShuffleSetCard:
 		return ReadMessageShuffleSetCard(b)
-	case coreMessageReverseDeck:
+	case lib.MessageReverseDeck:
 		return ReadMessageReverseDeck(b)
-	case coreMessageDeckTop:
+	case lib.MessageDeckTop:
 		return ReadMessageDeckTop(b)
-	case coreMessageShuffleExtra:
+	case lib.MessageShuffleExtra:
 		return ReadMessageShuffleExtra(b)
-	case coreMessageNewTurn:
+	case lib.MessageNewTurn:
 		return ReadMessageNewTurn(b)
-	case coreMessageNewPhase:
+	case lib.MessageNewPhase:
 		return ReadMessageNewPhase(b)
-	case coreMessageConfirmExtraTop:
+	case lib.MessageConfirmExtraTop:
 		return ReadMessageConfirmExtraTop(b)
-	case coreMessageMove:
+	case lib.MessageMove:
 		return ReadMessageMove(b)
-	case coreMessagePosChange:
+	case lib.MessagePosChange:
 		return ReadMessagePosChange(b)
-	case coreMessageSet:
+	case lib.MessageSet:
 		return ReadMessageSet(b)
-	case coreMessageSwap:
+	case lib.MessageSwap:
 		return ReadMessageSwap(b)
-	case coreMessageFieldDisabled:
+	case lib.MessageFieldDisabled:
 		return ReadMessageFieldDisabled(b)
-	case coreMessageSummoning:
+	case lib.MessageSummoning:
 		return ReadMessageSummoning(b)
-	case coreMessageSummoned:
+	case lib.MessageSummoned:
 		return ReadMessageSummoned(b)
-	case coreMessageSPSummoning:
+	case lib.MessageSPSummoning:
 		return ReadMessageSPSummoning(b)
-	case coreMessageSPSummoned:
+	case lib.MessageSPSummoned:
 		return ReadMessageSPSummoned(b)
-	case coreMessageFlipSummoning:
+	case lib.MessageFlipSummoning:
 		return ReadMessageFlipSummoning(b)
-	case coreMessageFlipSummoned:
+	case lib.MessageFlipSummoned:
 		return ReadMessageFlipSummoned(b)
-	case coreMessageChaining:
+	case lib.MessageChaining:
 		return ReadMessageChaining(b)
-	case coreMessageChained:
+	case lib.MessageChained:
 		return ReadMessageChained(b)
-	case coreMessageChainSolving:
+	case lib.MessageChainSolving:
 		return ReadMessageChainSolving(b)
-	case coreMessageChainSolved:
+	case lib.MessageChainSolved:
 		return ReadMessageChainSolved(b)
-	case coreMessageChainEnd:
+	case lib.MessageChainEnd:
 		return ReadMessageChainEnd(b)
-	case coreMessageChainNegated:
+	case lib.MessageChainNegated:
 		return ReadMessageChainNegated(b)
-	case coreMessageChainDisabled:
+	case lib.MessageChainDisabled:
 		return ReadMessageChainDisabled(b)
-	case coreMessageCardSelected:
+	case lib.MessageCardSelected:
 		return ReadMessageCardSelected(b)
-	case coreMessageRandomSelected:
+	case lib.MessageRandomSelected:
 		return ReadMessageRandomSelected(b)
-	case coreMessageBecomeTarget:
+	case lib.MessageBecomeTarget:
 		return ReadMessageBecomeTarget(b)
-	case coreMessageDraw:
+	case lib.MessageDraw:
 		return ReadMessageDraw(b)
-	case coreMessageDamage:
+	case lib.MessageDamage:
 		return ReadMessageDamage(b)
-	case coreMessageRecover:
+	case lib.MessageRecover:
 		return ReadMessageRecover(b)
-	case coreMessageEquip:
+	case lib.MessageEquip:
 		return ReadMessageEquip(b)
-	case coreMessageLPUpdate:
+	case lib.MessageLPUpdate:
 		return ReadMessageLPUpdate(b)
-	case coreMessageUnequip:
+	case lib.MessageUnequip:
 		return ReadMessageUnequip(b)
-	case coreMessageCardTarget:
+	case lib.MessageCardTarget:
 		return ReadMessageCardTarget(b)
-	case coreMessageCancelTarget:
+	case lib.MessageCancelTarget:
 		return ReadMessageCancelTarget(b)
-	case coreMessagePayLPCost:
+	case lib.MessagePayLPCost:
 		return ReadMessagePayLPCost(b)
-	case coreMessageAddCounter:
+	case lib.MessageAddCounter:
 		return ReadMessageAddCounter(b)
-	case coreMessageRemoveCounter:
+	case lib.MessageRemoveCounter:
 		return ReadMessageRemoveCounter(b)
-	case coreMessageAttack:
+	case lib.MessageAttack:
 		return ReadMessageAttack(b)
-	case coreMessageBattle:
+	case lib.MessageBattle:
 		return ReadMessageBattle(b)
-	case coreMessageAttackDisabled:
+	case lib.MessageAttackDisabled:
 		return ReadMessageAttackDisabled(b)
-	case coreMessageDamageStepStart:
+	case lib.MessageDamageStepStart:
 		return ReadMessageDamageStepStart(b)
-	case coreMessageDamageStepEnd:
+	case lib.MessageDamageStepEnd:
 		return ReadMessageDamageStepEnd(b)
-	case coreMessageMissedEffect:
+	case lib.MessageMissedEffect:
 		return ReadMessageMissedEffect(b)
-	case coreMessageBeChainTarget:
+	case lib.MessageBeChainTarget:
 		return ReadMessageBeChainTarget(b)
-	case coreMessageCreateRelation:
+	case lib.MessageCreateRelation:
 		return ReadMessageCreateRelation(b)
-	case coreMessageReleaseRelation:
+	case lib.MessageReleaseRelation:
 		return ReadMessageReleaseRelation(b)
-	case coreMessageTossCoin:
+	case lib.MessageTossCoin:
 		return ReadMessageTossCoin(b)
-	case coreMessageTossDice:
+	case lib.MessageTossDice:
 		return ReadMessageTossDice(b)
-	case coreMessageRockPaperScissors:
+	case lib.MessageRockPaperScissors:
 		return ReadMessageRockPaperScissors(b)
-	case coreMessageHandRes:
+	case lib.MessageHandRes:
 		return ReadMessageHandRes(b)
-	case coreMessageAnnounceRace:
+	case lib.MessageAnnounceRace:
 		return ReadMessageAnnounceRace(b)
-	case coreMessageAnnounceAttribute:
+	case lib.MessageAnnounceAttribute:
 		return ReadMessageAnnounceAttribute(b)
-	case coreMessageAnnounceCard:
+	case lib.MessageAnnounceCard:
 		return ReadMessageAnnounceCard(b)
-	case coreMessageAnnounceNumber:
+	case lib.MessageAnnounceNumber:
 		return ReadMessageAnnounceNumber(b)
-	case coreMessageCardHint:
+	case lib.MessageCardHint:
 		return ReadMessageCardHint(b)
-	case coreMessageTagSwap:
+	case lib.MessageTagSwap:
 		return ReadMessageTagSwap(b)
-	case coreMessageReloadField:
+	case lib.MessageReloadField:
 		return ReadMessageReloadField(b)
-	case coreMessageAIName:
+	case lib.MessageAIName:
 		return ReadMessageAIName(b)
-	case coreMessageShowHint:
+	case lib.MessageShowHint:
 		return ReadMessageShowHint(b)
-	case coreMessagePlayerHint:
+	case lib.MessagePlayerHint:
 		return ReadMessagePlayerHint(b)
-	case coreMessageMatchKill:
+	case lib.MessageMatchKill:
 		return ReadMessageMatchKill(b)
-	case coreMessageCustomMessage:
+	case lib.MessageCustomMessage:
 		return ReadMessageCustomMessage(b)
-	case coreMessageRemoveCards:
+	case lib.MessageRemoveCards:
 		return ReadMessageRemoveCards(b)
 	default:
 		fmt.Println("unhandled message:", id, "size:", len(contents)-1)
@@ -222,10 +221,10 @@ func readMessage(contents []byte) Message {
 
 func readCardLocation(b *bytes.Buffer) cardLocation {
 	return cardLocation{
-		controller: int(readUint8(b)),
-		location:   coreLocation(readUint8(b)),
-		sequence:   int(readUint32(b)),
-		position:   corePosition(readUint32(b)),
+		controller: int(utils.ReadUint8(b)),
+		location:   lib.Location(utils.ReadUint8(b)),
+		sequence:   int(utils.ReadUint32(b)),
+		position:   lib.Position(utils.ReadUint32(b)),
 	}
 }
 
@@ -421,9 +420,9 @@ type MessageHint struct {
 }
 
 func ReadMessageHint(b *bytes.Buffer) (msg MessageHint) {
-	msg.Hint = int(readUint8(b))
-	msg.Player = int(readUint8(b))
-	msg.Desc = readUint64(b)
+	msg.Hint = int(utils.ReadUint8(b))
+	msg.Player = int(utils.ReadUint8(b))
+	msg.Desc = utils.ReadUint64(b)
 	return
 }
 
@@ -457,8 +456,8 @@ type MessageWin struct {
 }
 
 func ReadMessageWin(b *bytes.Buffer) (msg MessageWin) {
-	msg.Player = int(readUint8(b))
-	msg.Reason = int(readUint8(b))
+	msg.Player = int(utils.ReadUint8(b))
+	msg.Reason = int(utils.ReadUint8(b))
 	return
 }
 
@@ -505,34 +504,34 @@ type MessageSelectBattleCMD struct {
 }
 
 func ReadMessageSelectBattleCMD(b *bytes.Buffer) (msg MessageSelectBattleCMD) {
-	msg.Player = int(readUint8(b))
+	msg.Player = int(utils.ReadUint8(b))
 
-	selectChainsSize := readUint32(b)
+	selectChainsSize := utils.ReadUint32(b)
 	msg.Chains = make([]ChainInfo, selectChainsSize)
 	for i := range msg.Chains {
 		msg.Chains[i] = ChainInfo{
-			Code:        int(readUint32(b)),
-			Controller:  int(readUint8(b)),
-			Location:    parseCoreLocation(coreLocation(readUint8(b))),
-			Sequence:    int(readUint32(b)),
-			Description: readUint64(b),
-			ClientMode:  readUint8(b),
+			Code:        int(utils.ReadUint32(b)),
+			Controller:  int(utils.ReadUint8(b)),
+			Location:    parseCoreLocation(lib.Location(utils.ReadUint8(b))),
+			Sequence:    int(utils.ReadUint32(b)),
+			Description: utils.ReadUint64(b),
+			ClientMode:  utils.ReadUint8(b),
 		}
 	}
 
-	attackableSize := readUint32(b)
+	attackableSize := utils.ReadUint32(b)
 	msg.Attacks = make([]AttackInfo, attackableSize)
 	for i := range msg.Attacks {
 		msg.Attacks[i] = AttackInfo{
-			Code:       int(readUint32(b)),
-			Controller: int(readUint8(b)),
-			Location:   parseCoreLocation(coreLocation(readUint8(b))),
-			Sequence:   int(readUint32(b)),
-			Direct:     readUint8(b) != 0,
+			Code:       int(utils.ReadUint32(b)),
+			Controller: int(utils.ReadUint8(b)),
+			Location:   parseCoreLocation(lib.Location(utils.ReadUint8(b))),
+			Sequence:   int(utils.ReadUint32(b)),
+			Direct:     utils.ReadUint8(b) != 0,
 		}
 	}
-	msg.ToM2 = readUint8(b) != 0
-	msg.ToEP = readUint8(b) != 0
+	msg.ToM2 = utils.ReadUint8(b) != 0
+	msg.ToEP = utils.ReadUint8(b) != 0
 	return
 }
 
@@ -554,79 +553,79 @@ type MessageSelectIdleCMD struct {
 }
 
 func ReadMessageSelectIdleCMD(b *bytes.Buffer) (msg MessageSelectIdleCMD) {
-	msg.Player = int(readUint8(b))
+	msg.Player = int(utils.ReadUint8(b))
 
-	summonableSize := readUint32(b)
+	summonableSize := utils.ReadUint32(b)
 	msg.Summons = make([]CardInfo, summonableSize)
 	for i := range msg.Summons {
 		msg.Summons[i] = CardInfo{
-			Code:       int(readUint32(b)),
-			Controller: int(readUint8(b)),
-			Location:   parseCoreLocation(coreLocation(readUint8(b))),
-			Sequence:   int(readUint32(b)),
+			Code:       int(utils.ReadUint32(b)),
+			Controller: int(utils.ReadUint8(b)),
+			Location:   parseCoreLocation(lib.Location(utils.ReadUint8(b))),
+			Sequence:   int(utils.ReadUint32(b)),
 		}
 	}
 
-	spSummonableSize := readUint32(b)
+	spSummonableSize := utils.ReadUint32(b)
 	msg.SpSummons = make([]CardInfo, spSummonableSize)
 	for i := range msg.SpSummons {
 		msg.SpSummons[i] = CardInfo{
-			Code:       int(readUint32(b)),
-			Controller: int(readUint8(b)),
-			Location:   parseCoreLocation(coreLocation(readUint8(b))),
-			Sequence:   int(readUint32(b)),
+			Code:       int(utils.ReadUint32(b)),
+			Controller: int(utils.ReadUint8(b)),
+			Location:   parseCoreLocation(lib.Location(utils.ReadUint8(b))),
+			Sequence:   int(utils.ReadUint32(b)),
 		}
 	}
 
-	posChangeSize := readUint32(b)
+	posChangeSize := utils.ReadUint32(b)
 	msg.PosChanges = make([]CardInfo, posChangeSize)
 	for i := range msg.PosChanges {
 		msg.PosChanges[i] = CardInfo{
-			Code:       int(readUint32(b)),
-			Controller: int(readUint8(b)),
-			Location:   parseCoreLocation(coreLocation(readUint8(b))),
-			Sequence:   int(readUint32(b)),
+			Code:       int(utils.ReadUint32(b)),
+			Controller: int(utils.ReadUint8(b)),
+			Location:   parseCoreLocation(lib.Location(utils.ReadUint8(b))),
+			Sequence:   int(utils.ReadUint32(b)),
 		}
 	}
 
-	monsterSetSize := readUint32(b)
+	monsterSetSize := utils.ReadUint32(b)
 	msg.MonsterSets = make([]CardInfo, monsterSetSize)
 	for i := range msg.MonsterSets {
 		msg.MonsterSets[i] = CardInfo{
-			Code:       int(readUint32(b)),
-			Controller: int(readUint8(b)),
-			Location:   parseCoreLocation(coreLocation(readUint8(b))),
-			Sequence:   int(readUint32(b)),
+			Code:       int(utils.ReadUint32(b)),
+			Controller: int(utils.ReadUint8(b)),
+			Location:   parseCoreLocation(lib.Location(utils.ReadUint8(b))),
+			Sequence:   int(utils.ReadUint32(b)),
 		}
 	}
 
-	spellSetSize := readUint32(b)
+	spellSetSize := utils.ReadUint32(b)
 	msg.SpellSets = make([]CardInfo, spellSetSize)
 	for i := range msg.SpellSets {
 		msg.SpellSets[i] = CardInfo{
-			Code:       int(readUint32(b)),
-			Controller: int(readUint8(b)),
-			Location:   parseCoreLocation(coreLocation(readUint8(b))),
-			Sequence:   int(readUint32(b)),
+			Code:       int(utils.ReadUint32(b)),
+			Controller: int(utils.ReadUint8(b)),
+			Location:   parseCoreLocation(lib.Location(utils.ReadUint8(b))),
+			Sequence:   int(utils.ReadUint32(b)),
 		}
 	}
 
-	activateSize := readUint32(b)
+	activateSize := utils.ReadUint32(b)
 	msg.Activate = make([]ChainInfo, activateSize)
 	for i := range msg.Activate {
 		msg.Activate[i] = ChainInfo{
-			Code:        int(readUint32(b)),
-			Controller:  int(readUint8(b)),
-			Location:    parseCoreLocation(coreLocation(readUint8(b))),
-			Sequence:    int(readUint32(b)),
-			Description: readUint64(b),
-			ClientMode:  readUint8(b),
+			Code:        int(utils.ReadUint32(b)),
+			Controller:  int(utils.ReadUint8(b)),
+			Location:    parseCoreLocation(lib.Location(utils.ReadUint8(b))),
+			Sequence:    int(utils.ReadUint32(b)),
+			Description: utils.ReadUint64(b),
+			ClientMode:  utils.ReadUint8(b),
 		}
 	}
 
-	msg.ToBP = readUint8(b) != 0
-	msg.ToEP = readUint8(b) != 0
-	msg.Shuffle = readUint8(b) != 0
+	msg.ToBP = utils.ReadUint8(b) != 0
+	msg.ToEP = utils.ReadUint8(b) != 0
+	msg.Shuffle = utils.ReadUint8(b) != 0
 	return
 }
 
@@ -645,14 +644,14 @@ type MessageSelectEffectYN struct {
 }
 
 func ReadMessageSelectEffectYN(b *bytes.Buffer) (msg MessageSelectEffectYN) {
-	msg.Player = int(readUint8(b))
-	msg.Code = readUint32(b)
+	msg.Player = int(utils.ReadUint8(b))
+	msg.Code = utils.ReadUint32(b)
 	loc := readCardLocation(b)
 	msg.Controller = loc.controller
 	msg.Location = parseCoreLocation(loc.location)
 	msg.Sequence = loc.sequence
 	msg.Position = parseCorePosition(loc.position)
-	msg.Description = readUint64(b)
+	msg.Description = utils.ReadUint64(b)
 	return
 }
 
@@ -666,8 +665,8 @@ type MessageSelectYesNo struct {
 }
 
 func ReadMessageSelectYesNo(b *bytes.Buffer) (msg MessageSelectYesNo) {
-	msg.Player = int(readUint8(b))
-	msg.Description = readUint64(b)
+	msg.Player = int(utils.ReadUint8(b))
+	msg.Description = utils.ReadUint64(b)
 	return
 }
 
@@ -681,12 +680,12 @@ type MessageSelectOption struct {
 }
 
 func ReadMessageSelectOption(b *bytes.Buffer) (msg MessageSelectOption) {
-	msg.Player = int(readUint8(b))
+	msg.Player = int(utils.ReadUint8(b))
 
-	optionsSize := readUint8(b)
+	optionsSize := utils.ReadUint8(b)
 	msg.Options = make([]uint64, optionsSize)
 	for i := range msg.Options {
-		msg.Options[i] = readUint64(b)
+		msg.Options[i] = utils.ReadUint64(b)
 	}
 	return
 }
@@ -713,16 +712,16 @@ func parseCardLocation(loc cardLocation) CardLocation {
 }
 
 func ReadMessageSelectCard(b *bytes.Buffer) (msg MessageSelectCard) {
-	msg.Player = int(readUint8(b))
-	msg.Cancellable = readUint8(b) != 0
-	msg.Min = int(readUint32(b))
-	msg.Max = int(readUint32(b))
+	msg.Player = int(utils.ReadUint8(b))
+	msg.Cancellable = utils.ReadUint8(b) != 0
+	msg.Min = int(utils.ReadUint32(b))
+	msg.Max = int(utils.ReadUint32(b))
 
-	cardsSize := readUint32(b)
+	cardsSize := utils.ReadUint32(b)
 	msg.Cards = make([]FieldCardInfo, cardsSize)
 	for i := range msg.Cards {
 		msg.Cards[i] = FieldCardInfo{
-			Code:         int(readUint32(b)),
+			Code:         int(utils.ReadUint32(b)),
 			CardLocation: parseCardLocation(readCardLocation(b)),
 		}
 	}
@@ -743,20 +742,20 @@ type MessageSelectChain struct {
 }
 
 func ReadMessageSelectChain(b *bytes.Buffer) (msg MessageSelectChain) {
-	msg.Player = int(readUint8(b))
-	msg.SpeCount = int(readUint8(b))
-	msg.Forced = readUint8(b) != 0
-	msg.HintTimingPlayer = readUint32(b)
-	msg.HintTimingOther = readUint32(b)
+	msg.Player = int(utils.ReadUint8(b))
+	msg.SpeCount = int(utils.ReadUint8(b))
+	msg.Forced = utils.ReadUint8(b) != 0
+	msg.HintTimingPlayer = utils.ReadUint32(b)
+	msg.HintTimingOther = utils.ReadUint32(b)
 
-	chainsSize := readUint32(b)
+	chainsSize := utils.ReadUint32(b)
 	msg.Chains = make([]CardChainInfo, chainsSize)
 	for i := range msg.Chains {
 		msg.Chains[i] = CardChainInfo{
-			Code:         int(readUint32(b)),
+			Code:         int(utils.ReadUint32(b)),
 			CardLocation: parseCardLocation(readCardLocation(b)),
-			Description:  readUint64(b),
-			ClientMode:   readUint8(b),
+			Description:  utils.ReadUint64(b),
+			ClientMode:   utils.ReadUint8(b),
 		}
 	}
 	return
@@ -773,9 +772,9 @@ type MessageSelectPlace struct {
 }
 
 func ReadMessageSelectPlace(b *bytes.Buffer) (msg MessageSelectPlace) {
-	msg.Player = int(readUint8(b))
-	msg.Count = int(readUint8(b))
-	msg.Places = parsePlaceFlag(readUint32(b))
+	msg.Player = int(utils.ReadUint8(b))
+	msg.Count = int(utils.ReadUint8(b))
+	msg.Places = parsePlaceFlag(utils.ReadUint32(b))
 	return
 }
 
@@ -790,9 +789,9 @@ type MessageSelectPosition struct {
 }
 
 func ReadMessageSelectPosition(b *bytes.Buffer) (msg MessageSelectPosition) {
-	msg.Player = int(readUint8(b))
-	msg.Code = readUint32(b)
-	msg.Positions = parseCorePositions(corePosition(readUint8(b)))
+	msg.Player = int(utils.ReadUint8(b))
+	msg.Code = utils.ReadUint32(b)
+	msg.Positions = parseCorePositions(lib.Position(utils.ReadUint8(b)))
 	return
 }
 
@@ -809,20 +808,20 @@ type MessageSelectTribute struct {
 }
 
 func ReadMessageSelectTribute(b *bytes.Buffer) (msg MessageSelectTribute) {
-	msg.Player = int(readUint8(b))
-	msg.Cancellable = readUint8(b) != 0
-	msg.Min = int(readUint32(b))
-	msg.Max = int(readUint32(b))
+	msg.Player = int(utils.ReadUint8(b))
+	msg.Cancellable = utils.ReadUint8(b) != 0
+	msg.Min = int(utils.ReadUint32(b))
+	msg.Max = int(utils.ReadUint32(b))
 
-	tributeSize := readUint32(b)
+	tributeSize := utils.ReadUint32(b)
 	msg.Cards = make([]TributeCardInfo, tributeSize)
 	for i := range msg.Cards {
 		msg.Cards[i] = TributeCardInfo{
-			Code:         int(readUint32(b)),
-			Controller:   int(readUint8(b)),
-			Location:     parseCoreLocation(coreLocation(readUint8(b))),
-			Sequence:     int(readUint32(b)),
-			ReleaseParam: int(readUint8(b)),
+			Code:         int(utils.ReadUint32(b)),
+			Controller:   int(utils.ReadUint8(b)),
+			Location:     parseCoreLocation(lib.Location(utils.ReadUint8(b))),
+			Sequence:     int(utils.ReadUint32(b)),
+			ReleaseParam: int(utils.ReadUint8(b)),
 		}
 	}
 	return
@@ -838,15 +837,15 @@ type MessageSortChain struct {
 }
 
 func ReadMessageSortChain(b *bytes.Buffer) (msg MessageSortChain) {
-	msg.Player = int(readUint8(b))
-	cardsSize := readUint32(b)
+	msg.Player = int(utils.ReadUint8(b))
+	cardsSize := utils.ReadUint32(b)
 	msg.Cards = make([]CardInfo, cardsSize)
 	for i := range msg.Cards {
 		msg.Cards[i] = CardInfo{
-			Code:       int(readUint32(b)),
-			Controller: int(readUint8(b)),
-			Location:   parseCoreLocation(coreLocation(readUint8(b))),
-			Sequence:   int(readUint32(b)),
+			Code:       int(utils.ReadUint32(b)),
+			Controller: int(utils.ReadUint8(b)),
+			Location:   parseCoreLocation(lib.Location(utils.ReadUint8(b))),
+			Sequence:   int(utils.ReadUint32(b)),
 		}
 	}
 	return
@@ -864,18 +863,18 @@ type MessageSelectCounter struct {
 }
 
 func ReadMessageSelectCounter(b *bytes.Buffer) (msg MessageSelectCounter) {
-	msg.Player = int(readUint8(b))
-	msg.CounterType = int(readUint16(b))
-	msg.Count = int(readUint16(b))
-	cardsSize := readUint32(b)
+	msg.Player = int(utils.ReadUint8(b))
+	msg.CounterType = int(utils.ReadUint16(b))
+	msg.Count = int(utils.ReadUint16(b))
+	cardsSize := utils.ReadUint32(b)
 	msg.Cards = make([]CounterCardInfo, cardsSize)
 	for i := range msg.Cards {
 		msg.Cards[i] = CounterCardInfo{
-			Code:       int(readUint32(b)),
-			Controller: int(readUint8(b)),
-			Location:   parseCoreLocation(coreLocation(readUint8(b))),
-			Sequence:   int(readUint8(b)),
-			Count:      int(readUint16(b)),
+			Code:       int(utils.ReadUint32(b)),
+			Controller: int(utils.ReadUint8(b)),
+			Location:   parseCoreLocation(lib.Location(utils.ReadUint8(b))),
+			Sequence:   int(utils.ReadUint8(b)),
+			Count:      int(utils.ReadUint16(b)),
 		}
 	}
 	return
@@ -896,31 +895,31 @@ type MessageSelectSum struct {
 }
 
 func ReadMessageSelectSum(b *bytes.Buffer) (msg MessageSelectSum) {
-	msg.Player = int(readUint8(b))
-	msg.HasMax = readUint8(b) != 0
-	msg.Acc = int(readUint32(b))
-	msg.Min = int(readUint32(b))
-	msg.Max = int(readUint32(b))
-	mustSelectsSize := readUint32(b)
+	msg.Player = int(utils.ReadUint8(b))
+	msg.HasMax = utils.ReadUint8(b) != 0
+	msg.Acc = int(utils.ReadUint32(b))
+	msg.Min = int(utils.ReadUint32(b))
+	msg.Max = int(utils.ReadUint32(b))
+	mustSelectsSize := utils.ReadUint32(b)
 	msg.MustSelects = make([]CounterCardInfo, mustSelectsSize)
 	for i := range msg.MustSelects {
 		msg.MustSelects[i] = CounterCardInfo{
-			Code:       int(readUint32(b)),
-			Controller: int(readUint8(b)),
-			Location:   parseCoreLocation(coreLocation(readUint8(b))),
-			Sequence:   int(readUint32(b)),
-			Count:      int(readUint32(b)),
+			Code:       int(utils.ReadUint32(b)),
+			Controller: int(utils.ReadUint8(b)),
+			Location:   parseCoreLocation(lib.Location(utils.ReadUint8(b))),
+			Sequence:   int(utils.ReadUint32(b)),
+			Count:      int(utils.ReadUint32(b)),
 		}
 	}
-	selectsSize := readUint32(b)
+	selectsSize := utils.ReadUint32(b)
 	msg.Selects = make([]CounterCardInfo, selectsSize)
 	for i := range msg.Selects {
 		msg.Selects[i] = CounterCardInfo{
-			Code:       int(readUint32(b)),
-			Controller: int(readUint8(b)),
-			Location:   parseCoreLocation(coreLocation(readUint8(b))),
-			Sequence:   int(readUint32(b)),
-			Count:      int(readUint32(b)),
+			Code:       int(utils.ReadUint32(b)),
+			Controller: int(utils.ReadUint8(b)),
+			Location:   parseCoreLocation(lib.Location(utils.ReadUint8(b))),
+			Sequence:   int(utils.ReadUint32(b)),
+			Count:      int(utils.ReadUint32(b)),
 		}
 	}
 	return
@@ -937,9 +936,9 @@ type MessageSelectDisfield struct {
 }
 
 func ReadMessageSelectDisfield(b *bytes.Buffer) (msg MessageSelectDisfield) {
-	msg.Player = int(readUint8(b))
-	msg.Count = int(readUint8(b))
-	msg.Flag = readUint32(b)
+	msg.Player = int(utils.ReadUint8(b))
+	msg.Count = int(utils.ReadUint8(b))
+	msg.Flag = utils.ReadUint32(b)
 	return
 }
 
@@ -953,15 +952,15 @@ type MessageSortCard struct {
 }
 
 func ReadMessageSortCard(b *bytes.Buffer) (msg MessageSortCard) {
-	msg.Player = int(readUint8(b))
-	cardsSize := readUint32(b)
+	msg.Player = int(utils.ReadUint8(b))
+	cardsSize := utils.ReadUint32(b)
 	msg.Cards = make([]CardInfo, cardsSize)
 	for i := range msg.Cards {
 		msg.Cards[i] = CardInfo{
-			Code:       int(readUint32(b)),
-			Controller: int(readUint8(b)),
-			Location:   parseCoreLocation(coreLocation(readUint8(b))),
-			Sequence:   int(readUint32(b)),
+			Code:       int(utils.ReadUint32(b)),
+			Controller: int(utils.ReadUint8(b)),
+			Location:   parseCoreLocation(lib.Location(utils.ReadUint8(b))),
+			Sequence:   int(utils.ReadUint32(b)),
 		}
 	}
 	return
@@ -982,25 +981,25 @@ type MessageSelectUnselectCard struct {
 }
 
 func ReadMessageSelectUnselectCard(b *bytes.Buffer) (msg MessageSelectUnselectCard) {
-	msg.Player = int(readUint8(b))
-	msg.Finishable = readUint8(b) != 0
-	msg.Cancellable = readUint8(b) != 0
-	msg.Min = int(readUint32(b))
-	msg.Max = int(readUint32(b))
+	msg.Player = int(utils.ReadUint8(b))
+	msg.Finishable = utils.ReadUint8(b) != 0
+	msg.Cancellable = utils.ReadUint8(b) != 0
+	msg.Min = int(utils.ReadUint32(b))
+	msg.Max = int(utils.ReadUint32(b))
 
-	selectsSize := readUint32(b)
+	selectsSize := utils.ReadUint32(b)
 	msg.Selects = make([]FieldCardInfo, selectsSize)
 	for i := range msg.Selects {
 		msg.Selects[i] = FieldCardInfo{
-			Code:         int(readUint32(b)),
+			Code:         int(utils.ReadUint32(b)),
 			CardLocation: parseCardLocation(readCardLocation(b)),
 		}
 	}
-	unselectsSize := readUint32(b)
+	unselectsSize := utils.ReadUint32(b)
 	msg.Unselects = make([]FieldCardInfo, unselectsSize)
 	for i := range msg.Unselects {
 		msg.Unselects[i] = FieldCardInfo{
-			Code:         int(readUint32(b)),
+			Code:         int(utils.ReadUint32(b)),
 			CardLocation: parseCardLocation(readCardLocation(b)),
 		}
 	}
@@ -1017,15 +1016,15 @@ type MessageConfirmDeckTop struct {
 }
 
 func ReadMessageConfirmDeckTop(b *bytes.Buffer) (msg MessageConfirmDeckTop) {
-	msg.Player = int(readUint8(b))
-	cardsSize := readUint32(b)
+	msg.Player = int(utils.ReadUint8(b))
+	cardsSize := utils.ReadUint32(b)
 	msg.Cards = make([]CardInfo, cardsSize)
 	for i := range msg.Cards {
 		msg.Cards[i] = CardInfo{
-			Code:       int(readUint32(b)),
-			Controller: int(readUint8(b)),
-			Location:   parseCoreLocation(coreLocation(readUint8(b))),
-			Sequence:   int(readUint32(b)),
+			Code:       int(utils.ReadUint32(b)),
+			Controller: int(utils.ReadUint8(b)),
+			Location:   parseCoreLocation(lib.Location(utils.ReadUint8(b))),
+			Sequence:   int(utils.ReadUint32(b)),
 		}
 	}
 	return
@@ -1041,15 +1040,15 @@ type MessageConfirmCards struct {
 }
 
 func ReadMessageConfirmCards(b *bytes.Buffer) (msg MessageConfirmCards) {
-	msg.Player = int(readUint8(b))
-	cardsSize := readUint32(b)
+	msg.Player = int(utils.ReadUint8(b))
+	cardsSize := utils.ReadUint32(b)
 	msg.Cards = make([]CardInfo, cardsSize)
 	for i := range msg.Cards {
 		msg.Cards[i] = CardInfo{
-			Code:       int(readUint32(b)),
-			Controller: int(readUint8(b)),
-			Location:   parseCoreLocation(coreLocation(readUint8(b))),
-			Sequence:   int(readUint32(b)),
+			Code:       int(utils.ReadUint32(b)),
+			Controller: int(utils.ReadUint8(b)),
+			Location:   parseCoreLocation(lib.Location(utils.ReadUint8(b))),
+			Sequence:   int(utils.ReadUint32(b)),
 		}
 	}
 	return
@@ -1064,7 +1063,7 @@ type MessageShuffleDeck struct {
 }
 
 func ReadMessageShuffleDeck(b *bytes.Buffer) (msg MessageShuffleDeck) {
-	msg.Player = int(readUint8(b))
+	msg.Player = int(utils.ReadUint8(b))
 	return
 }
 
@@ -1161,7 +1160,7 @@ type MessageNewTurn struct {
 }
 
 func ReadMessageNewTurn(b *bytes.Buffer) (msg MessageNewTurn) {
-	msg.Player = int(readUint8(b))
+	msg.Player = int(utils.ReadUint8(b))
 	return
 }
 
@@ -1175,7 +1174,7 @@ type MessageNewPhase struct {
 }
 
 func ReadMessageNewPhase(b *bytes.Buffer) (msg MessageNewPhase) {
-	phase := corePhase(readUint16(b))
+	phase := lib.Phase(utils.ReadUint16(b))
 	msg.DetailedPhase = parseCorePhaseDetailed(phase)
 	msg.Phase = parseCorePhase(phase)
 	return
@@ -1204,10 +1203,10 @@ type MessageMove struct {
 }
 
 func ReadMessageMove(b *bytes.Buffer) (msg MessageMove) {
-	msg.Card.Code = int(readUint32(b))
+	msg.Card.Code = int(utils.ReadUint32(b))
 	msg.Card.CardLocation = parseCardLocation(readCardLocation(b))
 	msg.Previous = parseCardLocation(readCardLocation(b))
-	msg.Reason = readUint32(b)
+	msg.Reason = utils.ReadUint32(b)
 	return
 }
 
@@ -1268,7 +1267,7 @@ type MessageSummoning struct {
 }
 
 func ReadMessageSummoning(b *bytes.Buffer) (msg MessageSummoning) {
-	msg.Card.Code = int(readUint32(b))
+	msg.Card.Code = int(utils.ReadUint32(b))
 	msg.Card.CardLocation = parseCardLocation(readCardLocation(b))
 	return
 }
@@ -1292,7 +1291,7 @@ type MessageSPSummoning struct {
 }
 
 func ReadMessageSPSummoning(b *bytes.Buffer) (msg MessageSPSummoning) {
-	msg.Card.Code = int(readUint32(b))
+	msg.Card.Code = int(utils.ReadUint32(b))
 	msg.Card.CardLocation = parseCardLocation(readCardLocation(b))
 	return
 }
@@ -1345,13 +1344,13 @@ type MessageChaining struct {
 }
 
 func ReadMessageChaining(b *bytes.Buffer) (msg MessageChaining) {
-	msg.Card.Code = int(readUint32(b))
+	msg.Card.Code = int(utils.ReadUint32(b))
 	msg.Card.CardLocation = parseCardLocation(readCardLocation(b))
-	msg.TriggerController = int(readUint8(b))
-	msg.TriggerLocation = parseCoreLocation(coreLocation(readUint8(b)))
-	msg.TriggerSequence = int(readUint8(b))
-	msg.Description = readUint64(b)
-	msg.Count = int(readUint32(b))
+	msg.TriggerController = int(utils.ReadUint8(b))
+	msg.TriggerLocation = parseCoreLocation(lib.Location(utils.ReadUint8(b)))
+	msg.TriggerSequence = int(utils.ReadUint8(b))
+	msg.Description = utils.ReadUint64(b)
+	msg.Count = int(utils.ReadUint32(b))
 	return
 }
 
@@ -1364,7 +1363,7 @@ type MessageChained struct {
 }
 
 func ReadMessageChained(b *bytes.Buffer) (msg MessageChained) {
-	msg.Count = int(readUint8(b))
+	msg.Count = int(utils.ReadUint8(b))
 	return
 }
 
@@ -1377,7 +1376,7 @@ type MessageChainSolving struct {
 }
 
 func ReadMessageChainSolving(b *bytes.Buffer) (msg MessageChainSolving) {
-	msg.Count = int(readUint8(b))
+	msg.Count = int(utils.ReadUint8(b))
 	return
 }
 
@@ -1390,7 +1389,7 @@ type MessageChainSolved struct {
 }
 
 func ReadMessageChainSolved(b *bytes.Buffer) (msg MessageChainSolved) {
-	msg.Count = int(readUint8(b))
+	msg.Count = int(utils.ReadUint8(b))
 	return
 }
 
@@ -1461,7 +1460,7 @@ type MessageBecomeTarget struct {
 }
 
 func ReadMessageBecomeTarget(b *bytes.Buffer) (msg MessageBecomeTarget) {
-	targetsLen := readUint32(b)
+	targetsLen := utils.ReadUint32(b)
 	msg.Targets = make([]CardLocation, targetsLen)
 	for i := range msg.Targets {
 		msg.Targets[i] = parseCardLocation(readCardLocation(b))
@@ -1479,13 +1478,13 @@ type MessageDraw struct {
 }
 
 func ReadMessageDraw(b *bytes.Buffer) (msg MessageDraw) {
-	msg.Player = int(readUint8(b))
-	cardsSize := readUint32(b)
+	msg.Player = int(utils.ReadUint8(b))
+	cardsSize := utils.ReadUint32(b)
 	msg.Cards = make([]DrawnCardInfo, cardsSize)
 	for i := range msg.Cards {
 		msg.Cards[i] = DrawnCardInfo{
-			Code:     int(readUint32(b)),
-			Position: parseCorePosition(corePosition(readUint32(b))).Face(),
+			Code:     int(utils.ReadUint32(b)),
+			Position: parseCorePosition(lib.Position(utils.ReadUint32(b))).Face(),
 		}
 	}
 	return
@@ -1925,164 +1924,4 @@ func ReadMessageRemoveCards(b *bytes.Buffer) (msg MessageRemoveCards) {
 
 func (MessageRemoveCards) messageType() MessageType {
 	return MessageTypeRemoveCards
-}
-
-type jsonMessageName struct {
-	MessageType MessageType `json:"message_type"`
-}
-
-func MessageToJSON(m Message) ([]byte, error) {
-	structTypesCacheLock.Lock()
-	defer structTypesCacheLock.Unlock()
-
-	v := createStructTypesCache(m.messageType(), reflect.TypeOf(m))
-	v.Field(0).Set(reflect.ValueOf(m))
-	return json.Marshal(v.Interface())
-}
-
-func JSONToMessage(b []byte) (Message, error) {
-	structTypesCacheLock.Lock()
-	defer structTypesCacheLock.Unlock()
-
-	var m jsonMessageName
-	err := json.Unmarshal(b, &m)
-	if err != nil {
-		return nil, err
-	}
-	typ, ok := messageUnmarshalMap[m.MessageType]
-	if !ok {
-		return nil, errors.New("type not found")
-	}
-	v := createStructTypesCache(m.MessageType, typ)
-	typV := reflect.New(v.Type())
-
-	err = json.Unmarshal(b, typV.Interface())
-	if err != nil {
-		return nil, err
-	}
-	return typV.Elem().Field(0).Interface().(Message), nil
-}
-
-var messageUnmarshalMap = map[MessageType]reflect.Type{
-	MessageTypeWaitingResponse:    reflect.TypeOf(MessageWaitingResponse{}),
-	MessageTypeRetry:              reflect.TypeOf(MessageRetry{}),
-	MessageTypeHint:               reflect.TypeOf(MessageHint{}),
-	MessageTypeWaiting:            reflect.TypeOf(MessageWaiting{}),
-	MessageTypeStart:              reflect.TypeOf(MessageStart{}),
-	MessageTypeWin:                reflect.TypeOf(MessageWin{}),
-	MessageTypeUpdateData:         reflect.TypeOf(MessageUpdateData{}),
-	MessageTypeUpdateCard:         reflect.TypeOf(MessageUpdateCard{}),
-	MessageTypeRequestDeck:        reflect.TypeOf(MessageRequestDeck{}),
-	MessageTypeSelectBattleCMD:    reflect.TypeOf(MessageSelectBattleCMD{}),
-	MessageTypeSelectIdleCMD:      reflect.TypeOf(MessageSelectIdleCMD{}),
-	MessageTypeSelectEffectYN:     reflect.TypeOf(MessageSelectEffectYN{}),
-	MessageTypeSelectYesNo:        reflect.TypeOf(MessageSelectYesNo{}),
-	MessageTypeSelectOption:       reflect.TypeOf(MessageSelectOption{}),
-	MessageTypeSelectCard:         reflect.TypeOf(MessageSelectCard{}),
-	MessageTypeSelectChain:        reflect.TypeOf(MessageSelectChain{}),
-	MessageTypeSelectPlace:        reflect.TypeOf(MessageSelectPlace{}),
-	MessageTypeSelectPosition:     reflect.TypeOf(MessageSelectPosition{}),
-	MessageTypeSelectTribute:      reflect.TypeOf(MessageSelectTribute{}),
-	MessageTypeSortChain:          reflect.TypeOf(MessageSortChain{}),
-	MessageTypeSelectCounter:      reflect.TypeOf(MessageSelectCounter{}),
-	MessageTypeSelectSum:          reflect.TypeOf(MessageSelectSum{}),
-	MessageTypeSelectDisfield:     reflect.TypeOf(MessageSelectDisfield{}),
-	MessageTypeSortCard:           reflect.TypeOf(MessageSortCard{}),
-	MessageTypeSelectUnselectCard: reflect.TypeOf(MessageSelectUnselectCard{}),
-	MessageTypeConfirmDeckTop:     reflect.TypeOf(MessageConfirmDeckTop{}),
-	MessageTypeConfirmCards:       reflect.TypeOf(MessageConfirmCards{}),
-	MessageTypeShuffleDeck:        reflect.TypeOf(MessageShuffleDeck{}),
-	MessageTypeShuffleHand:        reflect.TypeOf(MessageShuffleHand{}),
-	MessageTypeRefreshDeck:        reflect.TypeOf(MessageRefreshDeck{}),
-	MessageTypeSwapGraveDeck:      reflect.TypeOf(MessageSwapGraveDeck{}),
-	MessageTypeShuffleSetCard:     reflect.TypeOf(MessageShuffleSetCard{}),
-	MessageTypeReverseDeck:        reflect.TypeOf(MessageReverseDeck{}),
-	MessageTypeDeckTop:            reflect.TypeOf(MessageDeckTop{}),
-	MessageTypeShuffleExtra:       reflect.TypeOf(MessageShuffleExtra{}),
-	MessageTypeNewTurn:            reflect.TypeOf(MessageNewTurn{}),
-	MessageTypeNewPhase:           reflect.TypeOf(MessageNewPhase{}),
-	MessageTypeConfirmExtraTop:    reflect.TypeOf(MessageConfirmExtraTop{}),
-	MessageTypeMove:               reflect.TypeOf(MessageMove{}),
-	MessageTypePosChange:          reflect.TypeOf(MessagePosChange{}),
-	MessageTypeSet:                reflect.TypeOf(MessageSet{}),
-	MessageTypeSwap:               reflect.TypeOf(MessageSwap{}),
-	MessageTypeFieldDisabled:      reflect.TypeOf(MessageFieldDisabled{}),
-	MessageTypeSummoning:          reflect.TypeOf(MessageSummoning{}),
-	MessageTypeSummoned:           reflect.TypeOf(MessageSummoned{}),
-	MessageTypeSPSummoning:        reflect.TypeOf(MessageSPSummoning{}),
-	MessageTypeSPSummoned:         reflect.TypeOf(MessageSPSummoned{}),
-	MessageTypeFlipSummoning:      reflect.TypeOf(MessageFlipSummoning{}),
-	MessageTypeFlipSummoned:       reflect.TypeOf(MessageFlipSummoned{}),
-	MessageTypeChaining:           reflect.TypeOf(MessageChaining{}),
-	MessageTypeChained:            reflect.TypeOf(MessageChained{}),
-	MessageTypeChainSolving:       reflect.TypeOf(MessageChainSolving{}),
-	MessageTypeChainSolved:        reflect.TypeOf(MessageChainSolved{}),
-	MessageTypeChainEnd:           reflect.TypeOf(MessageChainEnd{}),
-	MessageTypeChainNegated:       reflect.TypeOf(MessageChainNegated{}),
-	MessageTypeChainDisabled:      reflect.TypeOf(MessageChainDisabled{}),
-	MessageTypeCardSelected:       reflect.TypeOf(MessageCardSelected{}),
-	MessageTypeRandomSelected:     reflect.TypeOf(MessageRandomSelected{}),
-	MessageTypeBecomeTarget:       reflect.TypeOf(MessageBecomeTarget{}),
-	MessageTypeDraw:               reflect.TypeOf(MessageDraw{}),
-	MessageTypeDamage:             reflect.TypeOf(MessageDamage{}),
-	MessageTypeRecover:            reflect.TypeOf(MessageRecover{}),
-	MessageTypeEquip:              reflect.TypeOf(MessageEquip{}),
-	MessageTypeLPUpdate:           reflect.TypeOf(MessageLPUpdate{}),
-	MessageTypeUnequip:            reflect.TypeOf(MessageUnequip{}),
-	MessageTypeCardTarget:         reflect.TypeOf(MessageCardTarget{}),
-	MessageTypeCancelTarget:       reflect.TypeOf(MessageCancelTarget{}),
-	MessageTypePayLPCost:          reflect.TypeOf(MessagePayLPCost{}),
-	MessageTypeAddCounter:         reflect.TypeOf(MessageAddCounter{}),
-	MessageTypeRemoveCounter:      reflect.TypeOf(MessageRemoveCounter{}),
-	MessageTypeAttack:             reflect.TypeOf(MessageAttack{}),
-	MessageTypeBattle:             reflect.TypeOf(MessageBattle{}),
-	MessageTypeAttackDisabled:     reflect.TypeOf(MessageAttackDisabled{}),
-	MessageTypeDamageStepStart:    reflect.TypeOf(MessageDamageStepStart{}),
-	MessageTypeDamageStepEnd:      reflect.TypeOf(MessageDamageStepEnd{}),
-	MessageTypeMissedEffect:       reflect.TypeOf(MessageMissedEffect{}),
-	MessageTypeBeChainTarget:      reflect.TypeOf(MessageBeChainTarget{}),
-	MessageTypeCreateRelation:     reflect.TypeOf(MessageCreateRelation{}),
-	MessageTypeReleaseRelation:    reflect.TypeOf(MessageReleaseRelation{}),
-	MessageTypeTossCoin:           reflect.TypeOf(MessageTossCoin{}),
-	MessageTypeTossDice:           reflect.TypeOf(MessageTossDice{}),
-	MessageTypeRockPaperScissors:  reflect.TypeOf(MessageRockPaperScissors{}),
-	MessageTypeHandRes:            reflect.TypeOf(MessageHandRes{}),
-	MessageTypeAnnounceRace:       reflect.TypeOf(MessageAnnounceRace{}),
-	MessageTypeAnnounceAttribute:  reflect.TypeOf(MessageAnnounceAttribute{}),
-	MessageTypeAnnounceCard:       reflect.TypeOf(MessageAnnounceCard{}),
-	MessageTypeAnnounceNumber:     reflect.TypeOf(MessageAnnounceNumber{}),
-	MessageTypeCardHint:           reflect.TypeOf(MessageCardHint{}),
-	MessageTypeTagSwap:            reflect.TypeOf(MessageTagSwap{}),
-	MessageTypeReloadField:        reflect.TypeOf(MessageReloadField{}),
-	MessageTypeAIName:             reflect.TypeOf(MessageAIName{}),
-	MessageTypeShowHint:           reflect.TypeOf(MessageShowHint{}),
-	MessageTypePlayerHint:         reflect.TypeOf(MessagePlayerHint{}),
-	MessageTypeMatchKill:          reflect.TypeOf(MessageMatchKill{}),
-	MessageTypeCustomMessage:      reflect.TypeOf(MessageCustomMessage{}),
-	MessageTypeRemoveCards:        reflect.TypeOf(MessageRemoveCards{}),
-}
-
-var structTypesCacheLock sync.Mutex
-var structTypesCache = map[MessageType]reflect.Value{}
-
-func createStructTypesCache(messageType MessageType, typ reflect.Type) reflect.Value {
-	if x, ok := structTypesCache[messageType]; ok {
-		return x
-	}
-	t := reflect.StructOf([]reflect.StructField{
-		{
-			Name:      typ.Name(),
-			Type:      typ,
-			Anonymous: true,
-		},
-		{
-			Name: "MessageType",
-			Type: reflect.TypeOf(""),
-			Tag:  `json:"message_type"`,
-		},
-	})
-	v := reflect.New(t).Elem()
-	v.Field(1).Set(reflect.ValueOf(messageType.String()))
-	structTypesCache[messageType] = v
-	return v
 }

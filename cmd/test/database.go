@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	_ "github.com/mattn/go-sqlite3"
 	"ocgcore"
+	"ocgcore/lib"
 )
 
 type cardDatabaseEntry struct {
@@ -62,12 +63,12 @@ LEFT JOIN texts t ON d.id = t.id`)
 			}
 		}
 
-		card.data.CardType = dataType
+		card.data.Type = lib.CardType(dataType)
 		card.data.Attack = dataAtk
 		card.data.Defense = dataDef
 
 		if (dataType & cardTypeLink) != 0 {
-			card.data.LinkMarker = uint32(dataDef)
+			card.data.LinkMarker = lib.LinkMarker(dataDef)
 			card.data.Defense = 0
 		}
 
@@ -78,8 +79,8 @@ LEFT JOIN texts t ON d.id = t.id`)
 		}
 		card.data.LScale = (dataLevel >> 16) & 0xff
 		card.data.RScale = (dataLevel >> 24) & 0xff
-		card.data.Race = dataRace
-		card.data.Attribute = dataAttribute
+		card.data.Race = lib.Race(dataRace)
+		card.data.Attribute = lib.Attribute(dataAttribute)
 
 		card.name = name
 		card.desc = desc

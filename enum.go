@@ -1,6 +1,111 @@
 package ocgcore
 
-//go:generate go run ocgcore/cmd/enumer -type=Location,FieldPlace,DetailedPhase,Phase,BattlePosition,FacePosition,Position -json -transform=snake -output enum_enumer.go -trimprefix Location,FieldPlace,DetailedPhase,Phase,BattlePosition,FacePosition,Position
+//go:generate go run ocgcore/cmd/enumer -type=CardMonsterAttribute,CardMonsterType,CardMonsterAbility,CardType,Location,FieldPlace,DetailedPhase,Phase,BattlePosition,FacePosition,Position -json -transform=snake -output enum_enumer.go -trimprefix self
+
+type CardType uint
+
+const (
+	CardTypeMonster CardType = iota
+	CardTypeSpell
+	CardTypeTrap
+	CardTypeToken
+)
+
+type CardSpellType uint
+
+const (
+	CardSpellTypeNormal CardSpellType = iota
+	CardSpellTypeQuickPlay
+	CardSpellTypeContinuous
+	CardSpellTypeEquip
+	CardSpellTypeField
+	CardSpellTypeRitual
+)
+
+type CardTrapType uint
+
+const (
+	CardTrapTypeNormal CardTrapType = iota
+	CardTrapTypeCounter
+	CardTrapTypeContinuous
+)
+
+type CardMonsterFrame uint
+
+const (
+	CardMonsterFrameNormal CardMonsterFrame = iota
+	CardMonsterFrameEffect
+	CardMonsterFrameFusion
+	CardMonsterFrameRitual
+	CardMonsterFrameSynchro
+	CardMonsterFrameXyz
+	CardMonsterFrameLink
+)
+
+type CardMonsterAbility uint
+
+const (
+	CardMonsterAbilityToon CardMonsterAbility = iota
+	CardMonsterAbilitySpirit
+	CardMonsterAbilityUnion
+	CardMonsterAbilityGemini
+	CardMonsterAbilityFlip
+)
+
+type CardMonsterType uint
+
+const (
+	CardMonsterTypeWarrior CardMonsterType = iota
+	CardMonsterTypeSpellCaster
+	CardMonsterTypeFairy
+	CardMonsterTypeFiend
+	CardMonsterTypeZombie
+	CardMonsterTypeMachine
+	CardMonsterTypeAqua
+	CardMonsterTypePyro
+	CardMonsterTypeRock
+	CardMonsterTypeWingedBeast
+	CardMonsterTypePlant
+	CardMonsterTypeInsect
+	CardMonsterTypeThunder
+	CardMonsterTypeDragon
+	CardMonsterTypeBeast
+	CardMonsterTypeBeastWarrior
+	CardMonsterTypeDinosaur
+	CardMonsterTypeFish
+	CardMonsterTypeSeaSerpent
+	CardMonsterTypeReptile
+	CardMonsterTypePsychic
+	CardMonsterTypeDivine
+	CardMonsterTypeCreatorGod
+	CardMonsterTypeWyrm
+	CardMonsterTypeCyberse
+)
+
+type CardMonsterAttribute uint
+
+const (
+	CardMonsterAttributeEarth CardMonsterAttribute = iota
+	CardMonsterAttributeWater
+	CardMonsterAttributeFire
+	CardMonsterAttributeWind
+	CardMonsterAttributeLight
+	CardMonsterAttributeDark
+	CardMonsterAttributeDivine
+)
+
+type CardLinkMarker uint
+
+const (
+	CardLinkMarkerTopLeft CardLinkMarker = iota
+	CardLinkMarkerTop
+	CardLinkMarkerTopRight
+	CardLinkMarkerRight
+	CardLinkMarkerBottomRight
+	CardLinkMarkerBottom
+	CardLinkMarkerBottomLeft
+	CardLinkMarkerLeft
+)
 
 type Location uint
 

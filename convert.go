@@ -1,6 +1,9 @@
 package ocgcore
 
-import "math/bits"
+import (
+	"math/bits"
+	"ocgcore/lib"
+)
 
 //       other              our
 // _____szone__mzone _____szone__mzone
@@ -13,6 +16,7 @@ func parsePlaceFlag(f uint32) []Place {
 	parsePlaceFlagPlayer((^f)>>16, 1, &x, ret)
 	return ret
 }
+
 func parsePlaceFlagPlayer(flag uint32, player int, x *int, ret []Place) {
 	mask := uint32(1)
 	for i := 0; i < 7; i++ {
@@ -49,154 +53,270 @@ func tryMask(flag uint32, mask *uint32) (r bool) {
 	return
 }
 
-func parseCorePhaseDetailed(p corePhase) DetailedPhase {
+func parseCorePhaseDetailed(p lib.Phase) DetailedPhase {
 	switch p {
-	case corePhaseDraw:
+	case lib.PhaseDraw:
 		return DetailedPhaseDraw
-	case corePhaseStandby:
+	case lib.PhaseStandby:
 		return DetailedPhaseStandby
-	case corePhaseMain1:
+	case lib.PhaseMain1:
 		return DetailedPhaseMain1
-	case corePhaseBattleStart:
+	case lib.PhaseBattleStart:
 		return DetailedPhaseBattleStart
-	case corePhaseBattleStep:
+	case lib.PhaseBattleStep:
 		return DetailedPhaseBattleStep
-	case corePhaseDamage:
+	case lib.PhaseDamage:
 		return DetailedPhaseDamage
-	case corePhaseDamageCalculation:
+	case lib.PhaseDamageCalculation:
 		return DetailedPhaseDamageCalculation
-	case corePhaseBattle:
+	case lib.PhaseBattle:
 		return DetailedPhaseBattle
-	case corePhaseMain2:
+	case lib.PhaseMain2:
 		return DetailedPhaseMain2
-	case corePhaseEnd:
+	case lib.PhaseEnd:
 		return DetailedPhaseEnd
 	}
 	return DetailedPhaseUnknown
 }
 
-func parseCorePhase(p corePhase) Phase {
+func parseCorePhase(p lib.Phase) Phase {
 	switch p {
-	case corePhaseDraw:
+	case lib.PhaseDraw:
 		return PhaseDP
-	case corePhaseStandby:
+	case lib.PhaseStandby:
 		return PhaseSP
-	case corePhaseMain1:
+	case lib.PhaseMain1:
 		return PhaseM1
-	case corePhaseBattleStart, corePhaseBattleStep, corePhaseDamage, corePhaseDamageCalculation, corePhaseBattle:
+	case lib.PhaseBattleStart, lib.PhaseBattleStep, lib.PhaseDamage, lib.PhaseDamageCalculation, lib.PhaseBattle:
 		return PhaseBP
-	case corePhaseMain2:
+	case lib.PhaseMain2:
 		return PhaseM2
-	case corePhaseEnd:
+	case lib.PhaseEnd:
 		return PhaseEP
 	}
 	return PhaseUnknown
 }
 
-func parseCorePosition(p corePosition) Position {
+func parseCorePosition(p lib.Position) Position {
 	switch p {
-	case corePositionFaceUpAttack:
+	case lib.PositionFaceUpAttack:
 		return PositionFaceUpAttack
-	case corePositionFaceDownAttack:
+	case lib.PositionFaceDownAttack:
 		return PositionFaceDownAttack
-	case corePositionFaceUpDefense:
+	case lib.PositionFaceUpDefense:
 		return PositionFaceUpDefense
-	case corePositionFaceDownDefense:
+	case lib.PositionFaceDownDefense:
 		return PositionFaceDownDefense
-	case corePositionFaceDown:
+	case lib.PositionFaceDown:
 		return PositionFaceDownAttack
-	case corePositionFaceUp:
+	case lib.PositionFaceUp:
 		return PositionFaceUpAttack
-	case corePositionDefense:
+	case lib.PositionDefense:
 		return PositionFaceUpDefense
-	case corePositionAttack:
+	case lib.PositionAttack:
 		return PositionFaceUpAttack
 	default:
 		return PositionUnknown
 	}
 }
 
-func convertPosition(p Position) corePosition {
+func convertPosition(p Position) lib.Position {
 	switch p {
 	case PositionFaceUpAttack:
-		return corePositionFaceUpAttack
+		return lib.PositionFaceUpAttack
 	case PositionFaceDownAttack:
-		return corePositionFaceDownAttack
+		return lib.PositionFaceDownAttack
 	case PositionFaceUpDefense:
-		return corePositionFaceUpDefense
+		return lib.PositionFaceUpDefense
 	case PositionFaceDownDefense:
-		return corePositionFaceDownDefense
+		return lib.PositionFaceDownDefense
 	}
 	return 0
 }
 
-func parseCorePositions(l corePosition) []Position {
+func parseCorePositions(l lib.Position) []Position {
 	var positions []Position
-	if l&corePositionFaceUpAttack != 0 {
+	if l&lib.PositionFaceUpAttack != 0 {
 		positions = append(positions, PositionFaceUpAttack)
 	}
-	if l&corePositionFaceDownAttack != 0 {
+	if l&lib.PositionFaceDownAttack != 0 {
 		positions = append(positions, PositionFaceDownAttack)
 	}
-	if l&corePositionFaceUpDefense != 0 {
+	if l&lib.PositionFaceUpDefense != 0 {
 		positions = append(positions, PositionFaceUpDefense)
 	}
-	if l&corePositionFaceDownDefense != 0 {
+	if l&lib.PositionFaceDownDefense != 0 {
 		positions = append(positions, PositionFaceDownDefense)
 	}
 	return positions
 }
 
-func convertLocation(l Location) coreLocation {
+func convertLocation(l Location) lib.Location {
 	switch l {
 	case LocationDeck:
-		return coreLocationDeck
+		return lib.LocationDeck
 	case LocationHand:
-		return coreLocationHand
+		return lib.LocationHand
 	case LocationGrave:
-		return coreLocationGrave
+		return lib.LocationGrave
 	case LocationBanished:
-		return coreLocationRemoved
+		return lib.LocationRemoved
 	case LocationExtraDeck:
-		return coreLocationExtra
+		return lib.LocationExtra
 	case LocationOverlay:
-		return coreLocationOverlay
+		return lib.LocationOverlay
 	case LocationMonsterZone:
-		return coreLocationMZone
+		return lib.LocationMZone
 	case LocationSpellZone:
-		return coreLocationSZone
+		return lib.LocationSZone
 	case LocationFieldZone:
-		return coreLocationFZone
+		return lib.LocationFZone
 	case LocationPendulumZone:
-		return coreLocationPZone
+		return lib.LocationPZone
 	}
 	return 0
 }
 
-func parseCoreLocation(l coreLocation) Location {
-	if l&coreLocationPZone != 0 {
+func parseCoreLocation(l lib.Location) Location {
+	if l&lib.LocationPZone != 0 {
 		return LocationPendulumZone
 	}
-	if l&coreLocationFZone != 0 {
+	if l&lib.LocationFZone != 0 {
 		return LocationFieldZone
 	}
 	switch l {
-	case coreLocationDeck:
+	case lib.LocationDeck:
 		return LocationDeck
-	case coreLocationHand:
+	case lib.LocationHand:
 		return LocationHand
-	case coreLocationGrave:
+	case lib.LocationGrave:
 		return LocationGrave
-	case coreLocationRemoved:
+	case lib.LocationRemoved:
 		return LocationBanished
-	case coreLocationExtra:
+	case lib.LocationExtra:
 		return LocationExtraDeck
-	case coreLocationOverlay:
+	case lib.LocationOverlay:
 		return LocationOverlay
-	case coreLocationMZone:
+	case lib.LocationMZone:
 		return LocationMonsterZone
-	case coreLocationSZone:
+	case lib.LocationSZone:
 		return LocationSpellZone
 	}
 	return LocationUnknown
+}
+
+func ParseCardType(ot lib.CardType) CardType {
+	switch {
+	case ot&lib.CardTypeMonster != 0:
+		return CardTypeMonster
+	case ot&lib.CardTypeSpell != 0:
+		return CardTypeSpell
+	case ot&lib.CardTypeTrap != 0:
+		return CardTypeTrap
+	case ot&lib.CardTypeToken != 0:
+		return CardTypeToken
+	}
+	return 0
+}
+
+func ParseCardTypeMonster(ot lib.CardType) (mf CardMonsterFrame, mt CardMonsterType, ma CardMonsterAbility, mtu bool, mp bool) {
+	switch {
+	case ot&lib.CardTypeNormal != 0:
+		mf = CardMonsterFrameNormal
+	case ot&lib.CardTypeEffect != 0:
+		mf = CardMonsterFrameEffect
+	case ot&lib.CardTypeFusion != 0:
+		mf = CardMonsterFrameFusion
+	case ot&lib.CardTypeRitual != 0:
+		mf = CardMonsterFrameRitual
+	case ot&lib.CardTypeSynchro != 0:
+		mf = CardMonsterFrameSynchro
+	case ot&lib.CardTypeXyz != 0:
+		mf = CardMonsterFrameXyz
+	case ot&lib.CardTypeLink != 0:
+		mf = CardMonsterFrameLink
+	}
+	switch {
+	case ot&lib.CardTypeSpirit != 0:
+		ma = CardMonsterAbilitySpirit
+	case ot&lib.CardTypeUnion != 0:
+		ma = CardMonsterAbilityUnion
+	case ot&lib.CardTypeGemini != 0:
+		ma = CardMonsterAbilityGemini
+	case ot&lib.CardTypeFlip != 0:
+		ma = CardMonsterAbilityFlip
+	case ot&lib.CardTypeToon != 0:
+		ma = CardMonsterAbilityToon
+	}
+	if ot&lib.CardTypeTuner != 0 {
+		mtu = true
+	}
+	if ot&lib.CardTypePendulum != 0 {
+		mp = true
+	}
+	return
+}
+
+func ParseCardTypeSpell(ot lib.CardType) CardSpellType {
+	switch {
+	case ot&lib.CardTypeQuickPlay != 0:
+		return CardSpellTypeQuickPlay
+	case ot&lib.CardTypeContinuous != 0:
+		return CardSpellTypeContinuous
+	case ot&lib.CardTypeEquip != 0:
+		return CardSpellTypeEquip
+	case ot&lib.CardTypeField != 0:
+		return CardSpellTypeField
+	case ot&lib.CardTypeRitual != 0:
+		return CardSpellTypeRitual
+	}
+	return CardSpellTypeNormal
+}
+
+func ParseCardTypeTrap(ot lib.CardType) CardTrapType {
+	switch {
+	case ot&lib.CardTypeContinuous != 0:
+		return CardTrapTypeContinuous
+	case ot&lib.CardTypeCounter != 0:
+		return CardTrapTypeCounter
+	}
+	return CardTrapTypeNormal
+}
+
+func ParseLinkMarkers(m lib.LinkMarker) []CardLinkMarker {
+	ms := make([]CardLinkMarker, bits.OnesCount32(uint32(m)))
+	msi := 0
+	if m&lib.LinkMarkerBottomLeft != 0 {
+		ms[msi] = CardLinkMarkerBottomLeft
+		msi++
+	}
+	if m&lib.LinkMarkerBottom != 0 {
+		ms[msi] = CardLinkMarkerBottom
+		msi++
+	}
+	if m&lib.LinkMarkerBottomRight != 0 {
+		ms[msi] = CardLinkMarkerBottomRight
+		msi++
+	}
+	if m&lib.LinkMarkerLeft != 0 {
+		ms[msi] = CardLinkMarkerLeft
+		msi++
+	}
+	if m&lib.LinkMarkerRight != 0 {
+		ms[msi] = CardLinkMarkerRight
+		msi++
+	}
+	if m&lib.LinkMarkerTopLeft != 0 {
+		ms[msi] = CardLinkMarkerTopLeft
+		msi++
+	}
+	if m&lib.LinkMarkerTop != 0 {
+		ms[msi] = CardLinkMarkerTop
+		msi++
+	}
+	if m&lib.LinkMarkerTopRight != 0 {
+		ms[msi] = CardLinkMarkerTopRight
+		msi++
+	}
+	return ms
 }

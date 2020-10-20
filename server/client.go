@@ -1,6 +1,7 @@
 package server
 
 import (
+	"errors"
 	"github.com/gorilla/websocket"
 	"log"
 	"time"
@@ -13,9 +14,10 @@ type Client struct {
 }
 
 func (c *Client) readPump() {
+	var err error
+
 	defer func() {
-		c.server.unregister <- c
-		_ = c.conn.Close()
+		c.server.kickClient(c, err)
 	}()
 
 	c.conn.SetReadLimit(maxMessageSize)
@@ -28,23 +30,27 @@ func (c *Client) readPump() {
 	})
 
 	for {
-		_, message, err := c.conn.ReadMessage()
+		var message []byte
+		_, message, err = c.conn.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 				log.Printf("error: %v", err)
+				return
 			}
-			break
+			err = nil
+			return
 		}
 		c.server.receive <- recvMessage{c, message}
 	}
 }
 
 func (c *Client) writePump() {
+	var err error
 	ticker := time.NewTicker(pingPeriod)
 
 	defer func() {
 		ticker.Stop()
-		_ = c.conn.Close()
+		c.server.kickClient(c, err)
 	}()
 
 	for {
@@ -55,17 +61,18 @@ func (c *Client) writePump() {
 			if !ok {
 				// The hub closed the channel.
 				_ = c.conn.WriteMessage(websocket.CloseMessage, []byte{})
+				err = errors.New("close")
 				return
 			}
 
-			err := c.conn.WriteMessage(websocket.TextMessage, message)
+			err = c.conn.WriteMessage(websocket.TextMessage, message)
 			if err != nil {
 				return
 			}
 
 		case <-ticker.C:
 			_ = c.conn.SetWriteDeadline(time.Now().Add(writeWait))
-			if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+			if err = c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
 				return
 			}
 		}

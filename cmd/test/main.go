@@ -48,18 +48,9 @@ func printJson(v interface{}) {
 }
 
 func test() error {
-	path, err := filepath.Abs("ocgcore.dll")
-	if err != nil {
-		return err
-	}
-	core, err := ocgcore.NewOcgCore(path)
-	if err != nil {
-		return err
-	}
-
 	rand.Seed(time.Now().Unix())
 
-	duel := core.CreateDuel(ocgcore.CreateDuelOptions{
+	duel := ocgcore.CreateDuel(ocgcore.CreateDuelOptions{
 		Seed:         rand.Uint32(),
 		Mode:         ocgcore.DuelModeMR5,
 		CardReader:   cardReader(),
@@ -141,7 +132,7 @@ func test() error {
 		if err != nil {
 			panic(err)
 		}
-
+		fmt.Println(string(out))
 		msg, err := ocgcore.JSONToMessage(out)
 		if err != nil {
 			panic(err)

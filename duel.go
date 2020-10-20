@@ -2,12 +2,12 @@ package ocgcore
 
 import (
 	"math/rand"
+	"ocgcore/lib"
 	"sync"
 )
 
 type OcgDuel struct {
-	c *OcgCore
-	h duelHandle
+	handle lib.Duel
 
 	messageCh  chan Message
 	incomingCh chan []byte
@@ -15,9 +15,13 @@ type OcgDuel struct {
 	aliveLock sync.Mutex
 }
 
+func newDuel(d lib.Duel) *OcgDuel {
+	return &OcgDuel{handle: d}
+}
+
 func (d *OcgDuel) Destroy() {
 	close(d.incomingCh)
-	d.c.destroyDuel(d.h)
+	lib.DestroyDuel(d.handle)
 }
 
 func (d *OcgDuel) Start() <-chan Message {
@@ -30,25 +34,25 @@ func (d *OcgDuel) Start() <-chan Message {
 
 func (d *OcgDuel) run() {
 	d.readMessages()
-	d.c.startDuel(d.h)
+	lib.StartDuel(d.handle)
 
 outer:
 	for {
-		status := d.c.duelProcess(d.h)
+		status := lib.DuelProcess(d.handle)
 		d.readMessages()
 		switch status {
-		case processorFlagEnd:
+		case lib.ProcessorFlagEnd:
 			break outer
-		case processorFlagWaiting:
+		case lib.ProcessorFlagWaiting:
 			d.messageCh <- MessageWaitingResponse{}
 			r, ok := <-d.incomingCh
 			if !ok {
 				return
 			}
 			if r != nil {
-				d.c.duelSetResponse(d.h, r)
+				lib.DuelSetResponse(d.handle, r)
 			}
-		case processorFlagContinue:
+		case lib.ProcessorFlagContinue:
 			continue
 		default:
 			panic("invalid status")
@@ -66,7 +70,7 @@ func (d *OcgDuel) readMessages() {
 	d.aliveLock.Lock()
 	defer d.aliveLock.Unlock()
 
-	messages := d.c.duelGetMessage(d.h)
+	messages := duelGetMessage(d.handle)
 	for _, message := range messages {
 		if d.messageCh != nil {
 			d.messageCh <- readMessage(message)
@@ -85,21 +89,21 @@ func (d *OcgDuel) SetupDeck(player int, mainDeck []uint32, extraDeck []uint32, s
 		})
 	}
 
-	var cardInfo typeNewCardInfo
-	cardInfo.duelist = 0
-	cardInfo.team = uint8(player)
-	cardInfo.con = uint8(player)
+	var cardInfo lib.NewCardInfo
+	cardInfo.Duelist = 0
+	cardInfo.Team = uint8(player)
+	cardInfo.Controller = uint8(player)
+	cardInfo.Position = lib.PositionFaceDownDefense
 
-	cardInfo.pos = uint32(corePositionFaceDownDefense)
-
-	cardInfo.loc = uint32(coreLocationDeck)
+	cardInfo.Location = lib.LocationDeck
 	for _, card := range mainDeck {
-		cardInfo.code = card
-		d.c.duelNewCard(d.h, cardInfo)
+		cardInfo.Code = card
+		lib.DuelNewCard(d.handle, cardInfo)
 	}
-	cardInfo.loc = uint32(coreLocationExtra)
+
+	cardInfo.Location = lib.LocationExtra
 	for _, card := range extraDeck {
-		cardInfo.code = card
-		d.c.duelNewCard(d.h, cardInfo)
+		cardInfo.Code = card
+		lib.DuelNewCard(d.handle, cardInfo)
 	}
 }

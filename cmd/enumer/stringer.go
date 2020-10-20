@@ -1,19 +1,10 @@
-// Copyright 2014 The Go Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style
-// license that can be found in the LICENSE file.
-
-// +build go1.5
-
-//Enumer is a tool to generate Go code that adds useful methods to Go enums (constants with a specific type).
-//It started as a fork of Rob Pike’s Stringer tool
-//
-//Please visit http://github.com/alvaroloes/enumer for a comprehensive documentation
 package main
 
 import (
 	"bytes"
 	"flag"
 	"fmt"
+	"github.com/pascaldekloe/name"
 	"go/ast"
 	exact "go/constant"
 	"go/format"
@@ -27,8 +18,6 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
-
-	"github.com/pascaldekloe/name"
 )
 
 type arrayFlags []string
@@ -123,6 +112,9 @@ func main() {
 	// Run generate for each type.
 	for i, typeName := range types {
 		prefix := prefixes[0]
+		if prefix == "self" {
+			prefix = typeName
+		}
 		if len(prefixes) == len(types) {
 			prefix = prefixes[i]
 		}
@@ -198,72 +190,6 @@ type Package struct {
 	files    []*File
 	typesPkg *types.Package
 }
-
-//// parsePackageDir parses the package residing in the directory.
-//func (g *Generator) parsePackageDir(directory string) {
-//	pkg, err := build.Default.ImportDir(directory, 0)
-//	if err != nil {
-//		log.Fatalf("cannot process directory %s: %s", directory, err)
-//	}
-//	var names []string
-//	names = append(names, pkg.GoFiles...)
-//	names = append(names, pkg.CgoFiles...)
-//	// TODO: Need to think about constants in test files. Maybe write type_string_test.go
-//	// in a separate pass? For later.
-//	// names = append(names, pkg.TestGoFiles...) // These are also in the "foo" package.
-//	names = append(names, pkg.SFiles...)
-//	names = prefixDirectory(directory, names)
-//	g.parsePackage(directory, names, nil)
-//}
-//
-//// parsePackageFiles parses the package occupying the named files.
-//func (g *Generator) parsePackageFiles(names []string) {
-//	g.parsePackage(".", names, nil)
-//}
-//
-//// prefixDirectory places the directory name on the beginning of each name in the list.
-//func prefixDirectory(directory string, names []string) []string {
-//	if directory == "." {
-//		return names
-//	}
-//	ret := make([]string, len(names))
-//	for i, name := range names {
-//		ret[i] = filepath.Join(directory, name)
-//	}
-//	return ret
-//}
-
-//// parsePackage analyzes the single package constructed from the named files.
-//// If text is non-nil, it is a string to be used instead of the content of the file,
-//// to be used for testing. parsePackage exits if there is an error.
-//func (g *Generator) parsePackage(directory string, names []string, text interface{}) {
-//	var files []*File
-//	var astFiles []*ast.File
-//	g.pkg = new(Package)
-//	fs := token.NewFileSet()
-//	for _, name := range names {
-//		if !strings.HasSuffix(name, ".go") {
-//			continue
-//		}
-//		parsedFile, err := parser.ParseFile(fs, name, text, 0)
-//		if err != nil {
-//			log.Fatalf("parsing package: %s: %s", name, err)
-//		}
-//		astFiles = append(astFiles, parsedFile)
-//		files = append(files, &File{
-//			file: parsedFile,
-//			pkg:  g.pkg,
-//		})
-//	}
-//	if len(astFiles) == 0 {
-//		log.Fatalf("%s: no buildable Go files", directory)
-//	}
-//	g.pkg.name = astFiles[0].Name.Name
-//	g.pkg.files = files
-//	g.pkg.dir = directory
-//	// Type check the package.
-//	g.pkg.check(fs, astFiles)
-//}
 
 // parsePackage analyzes the single package constructed from the patterns and tags.
 // parsePackage exits if there is an error.
