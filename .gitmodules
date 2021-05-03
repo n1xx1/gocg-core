@@ -1,0 +1,6 @@
+[submodule "lib/cpp/ygo"]
+	path = lib/cpp/ygo
+	url = https://github.com/edo9300/ygopro-core.git
+[submodule "lib/cpp/lua"]
+	path = lib/cpp/lua
+	url = https://github.com/lua/lua.git

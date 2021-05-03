@@ -1,11 +1,5 @@
 package lib
 
-import (
-	"fmt"
-	"sync"
-	"unsafe"
-)
-
 /*
 #cgo LDFLAGS: ${SRCDIR}/libocgcore.a -lstdc++
 #include "ocgapi.h"
@@ -16,6 +10,12 @@ extern int goCallbackOCGScriptReader(void* payload, OCG_Duel duel, char* name);
 extern void goCallbackOCGLogHandler(void* payload, char* string, int type);
 */
 import "C"
+
+import (
+	"fmt"
+	"sync"
+	"unsafe"
+)
 
 var duelLock sync.Mutex
 var lastDuelId = uintptr(0)
